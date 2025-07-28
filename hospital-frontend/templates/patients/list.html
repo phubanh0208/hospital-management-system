@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Patients - Hospital Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patient-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid var(--border-default);
+        background: var(--surface-card);
+        border-radius: 8px;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        z-index: 1;
+    }
+    .patient-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        z-index: 2;
+    }
+    .patient-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, var(--brand-primary), var(--brand-secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+    }
+    .search-box {
+        position: relative;
+    }
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
+        border-top: none;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1050;
+        display: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: var(--shadow-md);
+    }
+    .search-result-item {
+        padding: 10px;
+        border-bottom: 1px solid var(--border-default);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .search-result-item:hover {
+        background-color: var(--surface-page);
+    }
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <h1 class="h3 mb-0 text-gray-800 me-3">
+                <i class="fas fa-users text-primary"></i> Patients Management
+            </h1>
+            {% if request.session.user_role %}
+            <span class="badge bg-{% if request.session.user_role == 'admin' %}danger{% elif request.session.user_role == 'doctor' %}success{% elif request.session.user_role == 'staff' %}warning{% else %}secondary{% endif %}">
+                {{ request.session.user_role|title }}
+            </span>
+            {% endif %}
+        </div>
+        {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+        <a href="{% url 'patients:create' %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus"></i> Add New Patient
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Search and Filter Row -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="search-box">
+                <form method="GET" class="d-flex">
+                    <input type="text" name="search" class="form-control" 
+                           placeholder="Search by name, code, phone, or email..." 
+                           value="{{ search }}" id="searchInput">
+                    <button type="submit" class="btn btn-outline-primary ms-2">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+                <div id="searchResults" class="search-results"></div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="d-flex justify-content-end">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown">
+                        <i class="fas fa-sort"></i> Sort by {{ sort_by|title }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?search={{ search }}&sort_by=fullName&sort_order=asc">Name (A-Z)</a></li>
+                        <li><a class="dropdown-item" href="?search={{ search }}&sort_by=fullName&sort_order=desc">Name (Z-A)</a></li>
+                        <li><a class="dropdown-item" href="?search={{ search }}&sort_by=patientCode&sort_order=asc">Code (Ascending)</a></li>
+                        <li><a class="dropdown-item" href="?search={{ search }}&sort_by=patientCode&sort_order=desc">Code (Descending)</a></li>
+                        <li><a class="dropdown-item" href="?search={{ search }}&sort_by=createdAt&sort_order=desc">Newest First</a></li>
+                        <li><a class="dropdown-item" href="?search={{ search }}&sort_by=createdAt&sort_order=asc">Oldest First</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patients Grid -->
+    {% if patients %}
+        <div class="row g-4">
+            {% for patient in patients %}
+            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                <div class="card patient-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="patient-avatar me-3">
+                                {{ patient.fullName|first|upper }}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-1">
+                                    <a href="{% url 'patients:detail' patient.id %}" class="text-decoration-none">
+                                        {{ patient.fullName }}
+                                    </a>
+                                </h5>
+                                <p class="text-muted small mb-0">
+                                    <i class="fas fa-id-card"></i> {{ patient.patientCode }}
+                                </p>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                        type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'patients:detail' patient.id %}">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'patients:update' patient.id %}">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'appointments:book' %}?patient={{ patient.id }}">
+                                        <i class="fas fa-calendar-plus"></i> Book Appointment
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'prescriptions:create' %}?patient_id={{ patient.id }}">
+                                        <i class="fas fa-prescription"></i> New Prescription
+                                    </a></li>
+                                    {% if request.session.user_role == 'admin' %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#"
+                                           onclick="deletePatient('{{ patient.id }}', '{{ patient.fullName }}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a></li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="text-sm">
+                            <p class="mb-1 d-flex align-items-center">
+                                <i class="fas fa-calendar-alt text-info me-2" style="width: 14px;"></i>
+                                <small>{{ patient.dateOfBirth|date:"M d, Y" }}</small>
+                                <span class="text-muted mx-2">|</span>
+                                <i class="fas fa-venus-mars text-secondary me-2" style="width: 14px;"></i>
+                                <small>{{ patient.gender|title }}</small>
+                            </p>
+                            <p class="mb-1 d-flex align-items-center">
+                                <i class="fas fa-phone text-success me-2" style="width: 14px;"></i>
+                                <small>{{ patient.phone }}</small>
+                            </p>
+                            {% if patient.email %}
+                            <p class="mb-1 d-flex align-items-center">
+                                <i class="fas fa-envelope text-warning me-2" style="width: 14px;"></i>
+                                <small>{{ patient.email }}</small>
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        {% if patient.address %}
+                        <div class="mt-2">
+                            <p class="mb-0 text-muted small">
+                                <i class="fas fa-map-marker-alt"></i>
+                                {{ patient.address.city }}{% if patient.address.district %}, {{ patient.address.district }}{% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        
+                        {% if patient.bloodType %}
+                        <div class="mt-2">
+                            <span class="badge bg-danger">{{ patient.bloodType }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer" style="background: var(--surface-page); border-top: 1px solid var(--border-default);">
+                        <small class="text-muted">
+                            <i class="fas fa-clock"></i>
+                            Created {{ patient.createdAt|date:"M d, Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.totalPages > 1 %}
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="Patients pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.hasPrev %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.currentPage|add:'-1' }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ pagination.page }}</span>
+                        </li>
+                        
+                        {% if pagination.hasNext %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ pagination.currentPage|add:'1' }}&search={{ search }}&sort_by={{ sort_by }}&sort_order={{ sort_order }}">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                
+                <div class="text-center text-muted">
+                    Showing {{ patients|length }} of {{ pagination.total }} patients
+                    {% if request.session.user_role != 'admin' %}
+                    <br><small><i class="fas fa-info-circle"></i> Patient deletion is restricted to administrators only</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No Patients Found</h4>
+            {% if search %}
+                <p class="text-muted">No patients match your search criteria.</p>
+                <a href="{% url 'patients:list' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-times"></i> Clear Search
+                </a>
+            {% else %}
+                <p class="text-muted">Start by adding your first patient.</p>
+                <a href="{% url 'patients:create' %}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add First Patient
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete patient <strong id="deletePatientName"></strong>?</p>
+                <p class="text-muted small">This action will deactivate the patient record but preserve all data for audit purposes.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete Patient</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% csrf_token %}
+<script>
+let deletePatientId = null;
+
+// Delete patient function
+function deletePatient(patientId, patientName) {
+    // Double-check admin role on client side (security is handled on server side)
+    const userRole = '{{ request.session.user_role }}';
+    if (userRole !== 'admin') {
+        alert('Only administrators can delete patients.');
+        return;
+    }
+
+    deletePatientId = patientId;
+    document.getElementById('deletePatientName').textContent = patientName;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+// Confirm delete
+document.getElementById('confirmDelete').addEventListener('click', function() {
+    if (!deletePatientId) return;
+    
+    fetch(`/patients/${deletePatientId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to delete patient. Please try again.');
+    });
+    
+    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+});
+
+// Live search functionality
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+if (searchInput && searchResults) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            fetch(`/patients/api/search/?q=${encodeURIComponent(query)}&limit=5`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.length > 0) {
+                    let html = '';
+                    data.data.forEach(patient => {
+                        html += `
+                            <div class="search-result-item" onclick="window.location.href='/patients/${patient.id}/'">
+                                <strong>${patient.fullName}</strong> (${patient.patientCode})
+                                <br><small class="text-muted">${patient.phone} • ${new Date(patient.dateOfBirth).toLocaleDateString()}</small>
+                            </div>
+                        `;
+                    });
+                    searchResults.innerHTML = html;
+                    searchResults.style.display = 'block';
+                } else {
+                    searchResults.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResults.style.display = 'none';
+            });
+        }, 300);
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+}
+</script>
+{% endblock %}

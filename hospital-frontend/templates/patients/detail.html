@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load patient_filters %}
+
+{% block title %}{{ patient.fullName }} - Patient Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patient-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, var(--brand-primary), var(--brand-secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 32px;
+    }
+    .info-card {
+        border-left: 4px solid var(--brand-primary);
+        background: var(--surface-page);
+    }
+    .stat-card {
+        border-radius: 10px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
+    .hover-lift:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+    .medical-history-item {
+        border-left: 3px solid #1cc88a;
+        background: #f8f9fa;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0 5px 5px 0;
+    }
+    .status-active { color: #1cc88a; }
+    .status-resolved { color: #36b9cc; }
+    .status-chronic { color: #f6c23e; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-user" style="color: var(--brand-primary);"></i> Patient Details
+        </h1>
+        <div>
+            <a href="{% url 'patients:update' patient.id %}" class="btn btn-warning btn-sm me-2">
+                <i class="fas fa-edit"></i> Edit Patient
+            </a>
+            <a href="{% url 'patients:list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Patients
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Patient Overview -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold" style="color: var(--brand-primary);">Patient Overview</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="patient-avatar-large mx-auto mb-3">
+                        {{ patient.fullName|first|upper }}
+                    </div>
+                    <h4 class="mb-1">{{ patient.fullName }}</h4>
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-id-card"></i> {{ patient.patientCode }}
+                    </p>
+                    
+                    {% if patient.bloodType %}
+                    <div class="mb-3">
+                        <span class="badge bg-{{ patient.bloodType|blood_type_color }} fs-6">{{ patient.bloodType }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="stat-card bg-primary text-white p-3">
+                                <i class="fas fa-birthday-cake fa-2x mb-2"></i>
+                                <div class="small">Age</div>
+                                <div class="h5">
+                                    {% if patient.dateOfBirth %}
+                                        {{ patient.dateOfBirth|calculate_age }} years
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <a href="{% url 'appointments:list' %}?patient_id={{ patient.id }}" class="text-decoration-none">
+                                <div class="stat-card bg-success text-white p-3 hover-lift">
+                                    <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                                    <div class="small">Visits</div>
+                                    <div class="h5">{{ visit_summary.totalAppointments|default:0 }}</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-4">
+                            <a href="{% url 'prescriptions:list' %}?patient_id={{ patient.id }}" class="text-decoration-none">
+                                <div class="stat-card bg-info text-white p-3 hover-lift">
+                                    <i class="fas fa-pills fa-2x mb-2"></i>
+                                    <div class="small">Total</div>
+                                    <div class="h5">{{ visit_summary.activePrescriptions|default:0 }}</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient Information -->
+        <div class="col-xl-8 col-lg-7">
+            <!-- Personal Information -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Personal Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-card p-3 mb-3">
+                                <h6><i class="fas fa-user text-primary"></i> Basic Info</h6>
+                                <p class="mb-1"><strong>Full Name:</strong> {{ patient.fullName }}</p>
+                                <p class="mb-1"><strong>Date of Birth:</strong> 
+                                    {% if patient.dateOfBirth %}
+                                        {{ patient.dateOfBirth|iso_to_date:"F d, Y" }}
+                                    {% else %}
+                                        <em class="text-muted">Not provided</em>
+                                    {% endif %}
+                                </p>
+                                <p class="mb-1"><strong>Gender:</strong> {{ patient.gender|title }}</p>
+                                {% if patient.bloodType %}
+                                <p class="mb-0"><strong>Blood Type:</strong> {{ patient.bloodType }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card p-3 mb-3">
+                                <h6><i class="fas fa-phone text-success"></i> Contact Info</h6>
+                                <p class="mb-1"><strong>Phone:</strong> {{ patient.phone|format_phone }}</p>
+                                {% if patient.email %}
+                                <p class="mb-0"><strong>Email:</strong> {{ patient.email }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if patient.address %}
+                    <div class="info-card p-3 mb-3">
+                        <h6><i class="fas fa-map-marker-alt text-warning"></i> Address</h6>
+                        <p class="mb-0">{{ patient.address|format_address }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if patient.emergencyContact %}
+                    <div class="info-card p-3">
+                        <h6><i class="fas fa-exclamation-triangle text-danger"></i> Emergency Contact</h6>
+                        <p class="mb-1"><strong>Name:</strong> {{ patient.emergencyContact.name }}</p>
+                        <p class="mb-1"><strong>Phone:</strong> {{ patient.emergencyContact.phone|format_phone }}</p>
+                        <p class="mb-1"><strong>Relationship:</strong> {{ patient.emergencyContact.relationship }}</p>
+                        {% if patient.emergencyContact.address %}
+                        <p class="mb-0"><strong>Address:</strong> {{ patient.emergencyContact.address }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Medical Information -->
+            {% if patient.allergies or patient.medicalHistory or medical_history %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Medical Information</h6>
+                </div>
+                <div class="card-body">
+                    {% if patient.allergies %}
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Allergies</h6>
+                        <p class="mb-0">{{ patient.allergies }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if patient.medicalHistory %}
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-notes-medical"></i> Medical History</h6>
+                        <p class="mb-0">{{ patient.medicalHistory }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if medical_history %}
+                    <h6><i class="fas fa-history"></i> Detailed Medical History</h6>
+                    {% for history in medical_history %}
+                    <div class="medical-history-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ history.conditionName }}</h6>
+                                {% if history.diagnosedDate %}
+                                <small class="text-muted">Diagnosed: {{ history.diagnosedDate|date:"M d, Y" }}</small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-secondary status-{{ history.status }}">
+                                {{ history.status|title }}
+                            </span>
+                        </div>
+                        {% if history.notes %}
+                        <p class="mt-2 mb-0 small">{{ history.notes }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Visit Summary -->
+            {% if visit_summary %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Visit Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Total Appointments:</strong> 
+                                <span class="badge bg-primary">{{ visit_summary.totalAppointments|default:0 }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong>Total Prescriptions:</strong>
+                                <span class="badge bg-success">{{ visit_summary.activePrescriptions|default:0 }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'appointments:book' %}?patient={{ patient.id }}" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="fas fa-calendar-plus"></i> Book Appointment
+                            </a>
+                        </div>
+                        {% if user_role == 'doctor' %}
+                        <div class="col-md-3 mb-2">
+                            <a href="{% url 'prescriptions:create' %}?patient_id={{ patient.id }}" class="btn btn-outline-success btn-sm w-100">
+                                <i class="fas fa-prescription"></i> New Prescription
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-outline-warning btn-sm w-100" onclick="addMedicalHistory()">
+                                <i class="fas fa-plus"></i> Add History
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Click on stats above to view related records.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Medical History Modal -->
+<div class="modal fade" id="medicalHistoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Medical History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="medicalHistoryForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="conditionName" class="form-label">Condition Name</label>
+                        <input type="text" class="form-control" id="conditionName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="diagnosedDate" class="form-label">Diagnosed Date</label>
+                        <input type="date" class="form-control" id="diagnosedDate">
+                    </div>
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" required>
+                            <option value="active">Active</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="chronic">Chronic</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add History</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addMedicalHistory() {
+    new bootstrap.Modal(document.getElementById('medicalHistoryModal')).show();
+}
+
+document.getElementById('medicalHistoryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        conditionName: document.getElementById('conditionName').value,
+        diagnosedDate: document.getElementById('diagnosedDate').value || null,
+        status: document.getElementById('status').value,
+        notes: document.getElementById('notes').value || null
+    };
+    
+    fetch(`/patients/{{ patient.id }}/medical-history/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to add medical history. Please try again.');
+    });
+});
+</script>
+{% endblock %}

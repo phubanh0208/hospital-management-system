@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Update {{ patient.fullName }} - Hospital Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: var(--surface-page);
+        border-left: 4px solid var(--brand-accent-2);
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h5 {
+        color: var(--brand-accent-2);
+        margin-bottom: 1rem;
+    }
+    .required-field::after {
+        content: " *";
+        color: #e74a3b;
+    }
+    .form-control:focus {
+        border-color: var(--brand-accent-2);
+        box-shadow: 0 0 0 0.2rem rgba(255, 209, 102, 0.25);
+    }
+    .patient-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, var(--brand-accent-2), #fd7e14);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 24px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-user-edit text-warning"></i> Update Patient
+        </h1>
+        <div>
+            <a href="{% url 'patients:detail' patient.id %}" class="btn btn-info btn-sm me-2">
+                <i class="fas fa-eye"></i> View Details
+            </a>
+            <a href="{% url 'patients:list' %}" class="btn btn-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Patients
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="patient-avatar me-3">
+                            {{ patient.fullName|first|upper }}
+                        </div>
+                        <div>
+                            <h6 class="m-0 font-weight-bold text-warning">Update Patient Information</h6>
+                            <small class="text-muted">{{ patient.patientCode }} - {{ patient.fullName }}</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="patientUpdateForm">
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user"></i> Personal Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="fullName" class="form-label">Full Name</label>
+                                    <input type="text" class="form-control" id="fullName" name="fullName" 
+                                           value="{{ form_data.fullName|default:patient.fullName }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                                    <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" 
+                                           value="{{ form_data.dateOfBirth|default:patient.dateOfBirth|date:'Y-m-d' }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="gender" class="form-label">Gender</label>
+                                    <select class="form-select" id="gender" name="gender">
+                                        <option value="">Select Gender</option>
+                                        <option value="male" {% if form_data.gender|default:patient.gender == 'male' %}selected{% endif %}>Male</option>
+                                        <option value="female" {% if form_data.gender|default:patient.gender == 'female' %}selected{% endif %}>Female</option>
+                                        <option value="other" {% if form_data.gender|default:patient.gender == 'other' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bloodType" class="form-label">Blood Type</label>
+                                    <select class="form-select" id="bloodType" name="bloodType">
+                                        <option value="">Select Blood Type</option>
+                                        <option value="A+" {% if form_data.bloodType|default:patient.bloodType == 'A+' %}selected{% endif %}>A+</option>
+                                        <option value="A-" {% if form_data.bloodType|default:patient.bloodType == 'A-' %}selected{% endif %}>A-</option>
+                                        <option value="B+" {% if form_data.bloodType|default:patient.bloodType == 'B+' %}selected{% endif %}>B+</option>
+                                        <option value="B-" {% if form_data.bloodType|default:patient.bloodType == 'B-' %}selected{% endif %}>B-</option>
+                                        <option value="AB+" {% if form_data.bloodType|default:patient.bloodType == 'AB+' %}selected{% endif %}>AB+</option>
+                                        <option value="AB-" {% if form_data.bloodType|default:patient.bloodType == 'AB-' %}selected{% endif %}>AB-</option>
+                                        <option value="O+" {% if form_data.bloodType|default:patient.bloodType == 'O+' %}selected{% endif %}>O+</option>
+                                        <option value="O-" {% if form_data.bloodType|default:patient.bloodType == 'O-' %}selected{% endif %}>O-</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-phone"></i> Contact Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ form_data.phone|default:patient.phone }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           value="{{ form_data.email|default:patient.email }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-map-marker-alt"></i> Address Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="street" class="form-label">Street Address</label>
+                                    <input type="text" class="form-control" id="street" name="street" 
+                                           value="{{ form_data.street|default:patient.address.street }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="ward" class="form-label">Ward</label>
+                                    <input type="text" class="form-control" id="ward" name="ward" 
+                                           value="{{ form_data.ward|default:patient.address.ward }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="district" class="form-label">District</label>
+                                    <input type="text" class="form-control" id="district" name="district" 
+                                           value="{{ form_data.district|default:patient.address.district }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="city" class="form-label">City</label>
+                                    <input type="text" class="form-control" id="city" name="city" 
+                                           value="{{ form_data.city|default:patient.address.city }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="zipCode" class="form-label">Zip Code</label>
+                                    <input type="text" class="form-control" id="zipCode" name="zipCode"
+                                           value="{% if form_data.zipCode %}{{ form_data.zipCode }}{% elif patient.address.zipCode %}{{ patient.address.zipCode }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Emergency Contact</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyName" class="form-label">Contact Name</label>
+                                    <input type="text" class="form-control" id="emergencyName" name="emergencyName" 
+                                           value="{{ form_data.emergencyName|default:patient.emergencyContact.name }}">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyPhone" class="form-label">Contact Phone</label>
+                                    <input type="tel" class="form-control" id="emergencyPhone" name="emergencyPhone" 
+                                           value="{{ form_data.emergencyPhone|default:patient.emergencyContact.phone }}">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyRelationship" class="form-label">Relationship</label>
+                                    <input type="text" class="form-control" id="emergencyRelationship" name="emergencyRelationship" 
+                                           value="{{ form_data.emergencyRelationship|default:patient.emergencyContact.relationship }}" 
+                                           placeholder="e.g., Spouse, Parent, Sibling">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyAddress" class="form-label">Contact Address</label>
+                                    <input type="text" class="form-control" id="emergencyAddress" name="emergencyAddress"
+                                           value="{% if form_data.emergencyAddress %}{{ form_data.emergencyAddress }}{% elif patient.emergencyContact.address %}{{ patient.emergencyContact.address }}{% endif %}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Medical Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-notes-medical"></i> Medical Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="allergies" class="form-label">Allergies</label>
+                                    <textarea class="form-control" id="allergies" name="allergies" rows="3" 
+                                              placeholder="List any known allergies...">{{ form_data.allergies|default:patient.allergies }}</textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="medicalHistory" class="form-label">Medical History</label>
+                                    <textarea class="form-control" id="medicalHistory" name="medicalHistory" rows="3" 
+                                              placeholder="Brief medical history...">{{ form_data.medicalHistory|default:patient.medicalHistory }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'patients:detail' patient.id %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning" id="submitBtn">
+                                <i class="fas fa-save"></i> Update Patient
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('patientUpdateForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+});
+
+// Auto-format phone numbers
+document.getElementById('phone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.startsWith('84')) {
+        value = '+' + value;
+    } else if (value.startsWith('0')) {
+        // Vietnamese mobile number
+    } else if (value.length >= 10) {
+        // International format
+        value = '+' + value;
+    }
+    e.target.value = value;
+});
+
+document.getElementById('emergencyPhone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.startsWith('84')) {
+        value = '+' + value;
+    } else if (value.startsWith('0')) {
+        // Vietnamese mobile number
+    } else if (value.length >= 10) {
+        // International format
+        value = '+' + value;
+    }
+    e.target.value = value;
+});
+
+// Set max date for date of birth (today)
+document.getElementById('dateOfBirth').max = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}
