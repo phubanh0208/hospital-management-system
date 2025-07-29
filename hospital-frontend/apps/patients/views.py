@@ -514,3 +514,4 @@ class PatientMedicalHistoryView(View):
         except Exception as e:
             logger.error(f"Error adding medical history for patient {patient_id}: {str(e)}")
             return JsonResponse({'success': False, 'message': 'Failed to add medical history. Please try again.'})
+// Updated: Mon, Sep  8, 2025 12:57:21 AM
