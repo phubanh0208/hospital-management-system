@@ -1,0 +1,1072 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Book Appointment{% endblock %}
+
+{% block extra_css %}
+<style>
+    .booking-header {
+        background: linear-gradient(135deg, var(--brand-secondary) 0%, var(--brand-primary) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .booking-form {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: var(--shadow-md);
+    }
+    
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-default);
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .section-title {
+        color: var(--brand-primary);
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+    }
+    
+    .section-title i {
+        margin-right: 0.5rem;
+    }
+    
+    .patient-card, .doctor-card {
+        border: 2px solid var(--border-default);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: var(--surface-card);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .patient-card:hover, .doctor-card:hover {
+        border-color: var(--brand-primary);
+        background-color: var(--surface-page);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+
+    .patient-card.selected, .doctor-card.selected {
+        border-color: var(--brand-primary);
+        background-color: rgba(108, 92, 231, 0.08);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .card-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .card-info {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    .datetime-input {
+        background: var(--surface-page);
+        border: 1px solid var(--border-default);
+        border-radius: 5px;
+        padding: 0.75rem;
+    }
+    
+    .priority-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .priority-normal {
+        background: rgba(32, 201, 151, 0.12);
+        color: #20c997;
+    }
+    
+    .priority-high {
+        background: rgba(255, 209, 102, 0.2);
+        color: #b8860b;
+    }
+    
+    .priority-urgent {
+        background: rgba(255, 71, 87, 0.12);
+        color: #ff4757;
+    }
+    
+    .booking-summary {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-default);
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+
+    /* Search functionality styles */
+    .search-box {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
+        border-top: none;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        border-radius: 0 0 0.35rem 0.35rem;
+        box-shadow: var(--shadow-md);
+    }
+
+    .search-result-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .search-result-item:hover {
+        background-color: var(--surface-page);
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    /* Placeholder styling */
+    #patientPlaceholder, #doctorPlaceholder {
+        border: 2px dashed var(--border-default);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        background-color: var(--surface-page);
+    }
+
+    #patientPlaceholder:hover, #doctorPlaceholder:hover {
+        border-color: var(--brand-primary);
+        color: var(--brand-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Error Message -->
+    {% if error_message %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endif %}
+    
+    <!-- Booking Header -->
+    <div class="booking-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-calendar-plus"></i> 
+                    Book New Appointment
+                </h2>
+                <p class="mb-1">Schedule a new appointment for patient consultation</p>
+                <p class="mb-0">Fill in the details below to book an appointment</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="{% url 'appointments:list' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Back to Appointments
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="booking-form">
+                <form method="POST" id="bookingForm">
+                    {% csrf_token %}
+                    
+                    <!-- Patient Selection -->
+                    <div class="form-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-user"></i> Select Patient
+                        </h5>
+
+                        <!-- Patient Search -->
+                        <div class="search-box">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="patientSearchInput"
+                                       placeholder="Search patients by name, code, phone, or email...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="patientSearchResults" class="search-results"></div>
+                        </div>
+
+                        <!-- Selected patient will appear here -->
+                        <div class="row" id="patientsList">
+                            <!-- Patients will be added dynamically from search -->
+                        </div>
+
+                        <div class="text-muted text-center py-3" id="patientPlaceholder">
+                            <i class="fas fa-search"></i>
+                            <p class="mb-0">Use the search box above to find and select a patient</p>
+                        </div>
+                        
+                        <input type="hidden" name="patient_id" id="selectedPatientId" value="{{ selected_patient_id }}">
+                    </div>
+                    
+                    <!-- Doctor Selection -->
+                    <div class="form-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-user-md"></i> Select Doctor
+                        </h5>
+
+                        <!-- Doctor Search -->
+                        <div class="search-box">
+                            <div class="input-group mb-3">
+                                <input type="text" class="form-control" id="doctorSearchInput"
+                                       placeholder="Search doctors by name, specialization...">
+                                <button class="btn btn-outline-secondary" type="button">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div id="doctorSearchResults" class="search-results"></div>
+                        </div>
+
+                        <!-- Selected doctor will appear here -->
+                        <div class="row" id="doctorsList">
+                            <!-- Doctors will be added dynamically from search -->
+                        </div>
+
+                        <div class="text-muted text-center py-3" id="doctorPlaceholder">
+                            <i class="fas fa-search"></i>
+                            <p class="mb-0">Use the search box above to find and select a doctor</p>
+                        </div>
+                        
+                                                <input type="hidden" name="doctor_id" id="selectedDoctorId" value="{{ selected_doctor_id }}">
+                        <input type="hidden" name="fee" id="consultationFee">
+                    </div>
+                    
+                    <!-- Appointment Details -->
+                    <div class="form-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-calendar-alt"></i> Appointment Details
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="appointmentType" class="form-label">Appointment Type</label>
+                                    <select name="appointment_type" id="appointmentType" class="form-control" required>
+                                        {% for value, label in appointment_types %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="priority" class="form-label">Priority</label>
+                                    <select name="priority" id="priority" class="form-control">
+                                        {% for value, label in priorities %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label for="scheduledDate" class="form-label">Scheduled Date & Time</label>
+                                    <input type="datetime-local" name="scheduled_date" id="scheduledDate" 
+                                           class="form-control datetime-input" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="duration" class="form-label">Duration (minutes)</label>
+                                    <select name="duration_minutes" id="duration" class="form-control">
+                                        <option value="15">15 minutes</option>
+                                        <option value="30" selected>30 minutes</option>
+                                        <option value="45">45 minutes</option>
+                                        <option value="60">60 minutes</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Information -->
+                    <div class="form-section">
+                        <h5 class="section-title">
+                            <i class="fas fa-notes-medical"></i> Additional Information
+                        </h5>
+                        
+                        <div class="form-group">
+                            <label for="reason" class="form-label">Reason for Visit</label>
+                            <input type="text" name="reason" id="reason" class="form-control" 
+                                   placeholder="Brief description of the reason for this appointment">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="symptoms" class="form-label">Symptoms (Optional)</label>
+                            <textarea name="symptoms" id="symptoms" class="form-control" rows="3"
+                                      placeholder="Describe any symptoms the patient is experiencing"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="notes" class="form-label">Additional Notes (Optional)</label>
+                            <textarea name="notes" id="notes" class="form-control" rows="3"
+                                      placeholder="Any additional information or special requirements"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-success btn-lg mr-3">
+                            <i class="fas fa-calendar-check"></i> Book Appointment
+                        </button>
+                        <a href="{% url 'appointments:list' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Booking Summary -->
+            <div class="booking-summary">
+                <h6 class="mb-3">
+                    <i class="fas fa-clipboard-list"></i> Booking Summary
+                </h6>
+                
+                <div id="summaryContent">
+                    <div class="text-muted text-center">
+                        <i class="fas fa-info-circle"></i><br>
+                        Select patient and doctor to see booking summary
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Tips -->
+            <div class="booking-summary mt-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-lightbulb"></i> Quick Tips
+                </h6>
+                
+                <div class="small">
+                    <div class="mb-2">
+                        <i class="fas fa-check text-success"></i> 
+                        Select both patient and doctor before proceeding
+                    </div>
+                    <div class="mb-2">
+                        <i class="fas fa-check text-success"></i> 
+                        Choose appropriate appointment type
+                    </div>
+                    <div class="mb-2">
+                        <i class="fas fa-check text-success"></i> 
+                        Set priority based on urgency
+                    </div>
+                    <div>
+                        <i class="fas fa-check text-success"></i> 
+                        Provide clear reason for visit
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-load doctor and patient if provided
+document.addEventListener('DOMContentLoaded', function() {
+    const selectedDoctorId = '{{ selected_doctor_id }}';
+    const selectedPatientId = '{{ selected_patient_id }}';
+
+    console.log('🔍 URL Parameters Debug:');
+    console.log('  - Doctor ID:', selectedDoctorId);
+    console.log('  - Patient ID:', selectedPatientId);
+    console.log('  - Current URL:', window.location.href);
+    console.log('  - URL Search Params:', window.location.search);
+
+    // Parse URL parameters manually for debugging
+    const urlParams = new URLSearchParams(window.location.search);
+    console.log('  - Manual patient param:', urlParams.get('patient'));
+    console.log('  - Manual doctor param:', urlParams.get('doctor'));
+
+    if (selectedDoctorId && selectedDoctorId !== 'None' && selectedDoctorId !== '') {
+        console.log('🩺 Auto-loading doctor...');
+        loadDoctorById(selectedDoctorId);
+    } else {
+        console.log('⚠️ No doctor ID to auto-load');
+    }
+
+    if (selectedPatientId && selectedPatientId !== 'None' && selectedPatientId !== '') {
+        console.log('👤 Auto-loading patient...');
+        loadPatientById(selectedPatientId);
+    } else {
+        console.log('⚠️ No patient ID to auto-load');
+    }
+});
+
+// Function to load doctor by ID
+async function loadDoctorById(doctorId) {
+    try {
+        console.log('Loading doctor by ID:', doctorId);
+
+        // Call the doctor profile API to get doctor details
+        const response = await fetch(`http://localhost:3000/api/doctors/profile/${doctorId}`);
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            const doctor = data.data;
+            console.log('Doctor data loaded:', doctor);
+
+            // Extract doctor information
+            const fullName = `${doctor.firstName || ''} ${doctor.lastName || ''}`.trim() || doctor.username || 'Unknown Doctor';
+            const specialization = doctor.specialization || 'General Medicine';
+            const username = doctor.username || '';
+
+            // Auto-select the doctor
+            selectDoctorFromSearch(doctorId, fullName, specialization, username);
+
+            console.log('Doctor auto-selected:', fullName);
+        } else {
+            console.error('Failed to load doctor:', data.message);
+        }
+    } catch (error) {
+        console.error('Error loading doctor:', error);
+    }
+}
+
+// Function to load patient by ID
+async function loadPatientById(patientId) {
+    try {
+        console.log('🔍 Loading patient by ID:', patientId);
+
+        // Call the patient API to get patient details (via Django proxy)
+        const url = `/patients/api/detail/${patientId}/`;
+        console.log('📡 Fetching from URL:', url);
+
+        const response = await fetch(url);
+        console.log('📥 Response status:', response.status);
+
+        if (!response.ok) {
+            console.warn('⚠️ Direct API failed, trying search API fallback...');
+            // Fallback: try to find patient using search API with patient ID
+            const searchResponse = await fetch(`/patients/api/search/?q=${patientId}&limit=1`);
+            const searchData = await searchResponse.json();
+
+            if (searchData.success && searchData.data.length > 0) {
+                const patient = searchData.data[0];
+                console.log('✅ Patient found via search:', patient);
+
+                const fullName = patient.fullName || 'Unknown Patient';
+                const patientCode = patient.patientCode || '';
+                const phone = patient.phone || '';
+                const email = patient.email || '';
+
+                selectPatientFromSearch(patientId, fullName, patientCode, phone, email);
+                console.log('🎯 Patient auto-selected via search:', fullName);
+                return;
+            } else {
+                console.error('❌ Patient not found in search either');
+                return;
+            }
+        }
+
+        const data = await response.json();
+        console.log('📄 Response data:', data);
+
+        if (data.success && data.data) {
+            const patient = data.data;
+            console.log('✅ Patient data loaded:', patient);
+
+            // Extract patient information
+            const fullName = patient.fullName || 'Unknown Patient';
+            const patientCode = patient.patientCode || '';
+            const phone = patient.phone || '';
+            const email = patient.email || '';
+
+            console.log('📋 Extracted patient info:', {
+                fullName, patientCode, phone, email
+            });
+
+            // Auto-select the patient
+            selectPatientFromSearch(patientId, fullName, patientCode, phone, email);
+
+            console.log('🎯 Patient auto-selected:', fullName);
+        } else {
+            console.error('❌ Failed to load patient:', data.message || 'Unknown error');
+        }
+    } catch (error) {
+        console.error('💥 Error loading patient:', error);
+    }
+}
+
+// CSRF Token helper
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+           getCookie('csrftoken');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Live Search for Patients
+let patientSearchTimeout;
+const patientSearchInput = document.getElementById('patientSearchInput');
+const patientSearchResults = document.getElementById('patientSearchResults');
+
+if (patientSearchInput && patientSearchResults) {
+    patientSearchInput.addEventListener('input', function() {
+        clearTimeout(patientSearchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            patientSearchResults.style.display = 'none';
+            return;
+        }
+
+        patientSearchTimeout = setTimeout(() => {
+            fetch(`/patients/api/search/?q=${encodeURIComponent(query)}&limit=5`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.length > 0) {
+                    let html = '';
+                    data.data.forEach(patient => {
+                        const fullName = (patient.fullName || '').replace(/'/g, "\\'");
+                        const patientCode = (patient.patientCode || '').replace(/'/g, "\\'");
+                        const phone = (patient.phone || '').replace(/'/g, "\\'");
+                        const email = (patient.email || '').replace(/'/g, "\\'");
+
+                        html += `
+                            <div class="search-result-item" onclick="selectPatientFromSearch('${patient.id}', '${fullName}', '${patientCode}', '${phone}', '${email}')">
+                                <strong>${patient.fullName}</strong> (${patient.patientCode})
+                                <br><small class="text-muted">${patient.phone || 'No phone'} • ${patient.email || 'No email'}</small>
+                            </div>
+                        `;
+                    });
+                    patientSearchResults.innerHTML = html;
+                    patientSearchResults.style.display = 'block';
+                } else {
+                    patientSearchResults.innerHTML = '<div class="search-result-item text-muted">No patients found</div>';
+                    patientSearchResults.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Patient search error:', error);
+                patientSearchResults.style.display = 'none';
+            });
+        }, 300);
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!patientSearchInput.contains(e.target) && !patientSearchResults.contains(e.target)) {
+            patientSearchResults.style.display = 'none';
+        }
+    });
+}
+
+// Live Search for Doctors
+let doctorSearchTimeout;
+const doctorSearchInput = document.getElementById('doctorSearchInput');
+const doctorSearchResults = document.getElementById('doctorSearchResults');
+
+if (doctorSearchInput && doctorSearchResults) {
+    doctorSearchInput.addEventListener('input', function() {
+        clearTimeout(doctorSearchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            doctorSearchResults.style.display = 'none';
+            return;
+        }
+
+        doctorSearchTimeout = setTimeout(() => {
+            fetch(`/doctors/api/search/?q=${encodeURIComponent(query)}&limit=5`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.doctors && data.doctors.length > 0) {
+                    let html = '';
+                    data.doctors.forEach(doctor => {
+                        const displayName = (doctor.name || doctor.username || '').replace(/'/g, "\\'");
+                        const specialization = (doctor.specialization || 'General Medicine').replace(/'/g, "\\'");
+                        const username = (doctor.username || '').replace(/'/g, "\\'");
+
+                        html += `
+                            <div class="search-result-item" onclick="selectDoctorFromSearch('${doctor.userId}', '${displayName}', '${specialization}', '${username}')">
+                                <strong>${doctor.name || doctor.username}</strong> (${doctor.username})
+                                <br><small class="text-muted">${doctor.specialization || 'General Medicine'}</small>
+                            </div>
+                        `;
+                    });
+                    doctorSearchResults.innerHTML = html;
+                    doctorSearchResults.style.display = 'block';
+                } else {
+                    doctorSearchResults.innerHTML = '<div class="search-result-item text-muted">No doctors found</div>';
+                    doctorSearchResults.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Doctor search error:', error);
+                doctorSearchResults.style.display = 'none';
+            });
+        }, 300);
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!doctorSearchInput.contains(e.target) && !doctorSearchResults.contains(e.target)) {
+            doctorSearchResults.style.display = 'none';
+        }
+    });
+}
+
+// Function to select patient from search results
+function selectPatientFromSearch(patientId, fullName, patientCode, phone, email) {
+    // Hide search results
+    patientSearchResults.style.display = 'none';
+
+    // Clear search input
+    patientSearchInput.value = '';
+
+    // Remove selected class from all patient cards
+    document.querySelectorAll('.patient-card').forEach(c => c.classList.remove('selected'));
+
+    // Hide placeholder
+    const patientPlaceholder = document.getElementById('patientPlaceholder');
+    if (patientPlaceholder) {
+        patientPlaceholder.style.display = 'none';
+    }
+
+    // Create or update patient card in the list
+    const patientsList = document.getElementById('patientsList');
+    let patientCard = document.querySelector(`[data-patient-id="${patientId}"]`);
+
+    if (!patientCard) {
+        // Clear existing cards first (only allow one selection)
+        patientsList.innerHTML = '';
+
+        // Create new patient card
+        const colDiv = document.createElement('div');
+        colDiv.className = 'col-md-6';
+        colDiv.innerHTML = `
+            <div class="patient-card selected" data-patient-id="${patientId}">
+                <div class="card-title">${fullName}</div>
+                <div class="card-info">
+                    <i class="fas fa-envelope"></i> ${email || 'No email'}<br>
+                    <i class="fas fa-phone"></i> ${phone || 'No phone'}<br>
+                    <i class="fas fa-id-card"></i> ${patientCode || 'No code'}
+                </div>
+                <div class="mt-2">
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearPatientSelection()">
+                        <i class="fas fa-times"></i> Clear Selection
+                    </button>
+                </div>
+            </div>
+        `;
+        patientsList.appendChild(colDiv);
+        patientCard = colDiv.querySelector('.patient-card');
+
+        // Add click event listener to new card
+        patientCard.addEventListener('click', function() {
+            document.querySelectorAll('.patient-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('selectedPatientId').value = this.dataset.patientId;
+            updateBookingSummary();
+        });
+    } else {
+        // Select existing card
+        patientCard.classList.add('selected');
+    }
+
+    // Update hidden input
+    document.getElementById('selectedPatientId').value = patientId;
+
+    // Update summary
+    updateBookingSummary();
+}
+
+// Function to select doctor from search results
+async function selectDoctorFromSearch(doctorId, fullName, specialization, username) {
+    // Fetch full doctor profile to get consultation fee
+    try {
+        const response = await fetch(`http://localhost:3000/api/doctors/profile/${doctorId}`);
+        const data = await response.json();
+        if (data.success && data.data) {
+                        const fee = data.data.consultationFee || '0.00';
+            document.getElementById('consultationFee').value = fee;
+        } else {
+            document.getElementById('consultationFee').value = '0.00'; // Default on failure
+        }
+    } catch (error) {
+        console.error('Error fetching doctor profile for fee:', error);
+        document.getElementById('consultationFee').value = '0.00'; // Default on error
+    }
+    // Hide search results
+    doctorSearchResults.style.display = 'none';
+
+    // Clear search input
+    doctorSearchInput.value = '';
+
+    // Remove selected class from all doctor cards
+    document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
+
+    // Hide placeholder
+    const doctorPlaceholder = document.getElementById('doctorPlaceholder');
+    if (doctorPlaceholder) {
+        doctorPlaceholder.style.display = 'none';
+    }
+
+    // Create or update doctor card in the list
+    const doctorsList = document.getElementById('doctorsList');
+    let doctorCard = document.querySelector(`[data-doctor-id="${doctorId}"]`);
+
+    if (!doctorCard) {
+        // Clear existing cards first (only allow one selection)
+        doctorsList.innerHTML = '';
+
+        // Create new doctor card
+        const colDiv = document.createElement('div');
+        colDiv.className = 'col-md-6';
+        colDiv.innerHTML = `
+            <div class="doctor-card selected" data-doctor-id="${doctorId}">
+                <div class="card-title">${fullName}</div>
+                <div class="card-info">
+                    <i class="fas fa-stethoscope text-primary"></i> ${specialization}<br>
+                    <i class="fas fa-user text-info"></i> ${username}
+                </div>
+                <div class="mt-2">
+                    <span class="badge bg-success">Available</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearDoctorSelection()">
+                        <i class="fas fa-times"></i> Clear Selection
+                    </button>
+                </div>
+            </div>
+        `;
+        doctorsList.appendChild(colDiv);
+        doctorCard = colDiv.querySelector('.doctor-card');
+
+        // Add click event listener to new card
+        doctorCard.addEventListener('click', function() {
+            document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('selectedDoctorId').value = this.dataset.doctorId;
+            updateBookingSummary();
+        });
+    } else {
+        // Select existing card
+        doctorCard.classList.add('selected');
+    }
+
+    // Update hidden input
+    document.getElementById('selectedDoctorId').value = doctorId;
+
+    // Update summary
+    updateBookingSummary();
+}
+
+// Clear patient selection
+function clearPatientSelection() {
+    const patientsList = document.getElementById('patientsList');
+    const patientPlaceholder = document.getElementById('patientPlaceholder');
+
+    // Clear the list
+    patientsList.innerHTML = '';
+
+    // Show placeholder
+    if (patientPlaceholder) {
+        patientPlaceholder.style.display = 'block';
+    }
+
+    // Clear hidden input
+    document.getElementById('selectedPatientId').value = '';
+
+    // Update summary
+    updateBookingSummary();
+}
+
+// Clear doctor selection
+function clearDoctorSelection() {
+    const doctorsList = document.getElementById('doctorsList');
+    const doctorPlaceholder = document.getElementById('doctorPlaceholder');
+
+    // Clear the list
+    doctorsList.innerHTML = '';
+
+    // Show placeholder
+    if (doctorPlaceholder) {
+        doctorPlaceholder.style.display = 'block';
+    }
+
+    // Clear hidden input
+    document.getElementById('selectedDoctorId').value = '';
+
+    // Update summary
+    updateBookingSummary();
+}
+
+// Patient selection (for existing cards - now mostly unused)
+document.querySelectorAll('.patient-card').forEach(card => {
+    card.addEventListener('click', function() {
+        // Remove selected class from all patient cards
+        document.querySelectorAll('.patient-card').forEach(c => c.classList.remove('selected'));
+        
+        // Add selected class to clicked card
+        this.classList.add('selected');
+        
+        // Update hidden input
+        document.getElementById('selectedPatientId').value = this.dataset.patientId;
+        
+        // Update summary
+        updateBookingSummary();
+    });
+});
+
+// Doctor selection
+document.querySelectorAll('.doctor-card').forEach(card => {
+    card.addEventListener('click', function() {
+        // Remove selected class from all doctor cards
+        document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
+        
+        // Add selected class to clicked card
+        this.classList.add('selected');
+        
+        // Update hidden input
+        document.getElementById('selectedDoctorId').value = this.dataset.doctorId;
+        
+        // Update summary
+        updateBookingSummary();
+    });
+});
+
+// Format datetime for display (avoid timezone issues)
+function formatLocalDateTime(datetimeString) {
+    if (!datetimeString) return '';
+
+    try {
+        // Parse the datetime-local value (YYYY-MM-DDTHH:MM)
+        const [datePart, timePart] = datetimeString.split('T');
+        const [year, month, day] = datePart.split('-');
+        const [hours, minutes] = timePart.split(':');
+
+        // Create date object using local timezone
+        const date = new Date(year, month - 1, day, hours, minutes);
+
+        // Format for display
+        const options = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        };
+
+        return date.toLocaleDateString('en-US', options);
+    } catch (error) {
+        console.error('Error formatting datetime:', error);
+        return datetimeString;
+    }
+}
+
+// Update booking summary
+function updateBookingSummary() {
+    const selectedPatient = document.querySelector('.patient-card.selected');
+    const selectedDoctor = document.querySelector('.doctor-card.selected');
+    const appointmentType = document.getElementById('appointmentType').value;
+    const priority = document.getElementById('priority').value;
+    const scheduledDate = document.getElementById('scheduledDate').value;
+    const duration = document.getElementById('duration').value;
+    const fee = document.getElementById('consultationFee').value || '0.00';
+
+    let summaryHtml = '';
+
+    if (selectedPatient && selectedDoctor) {
+        const patientName = selectedPatient.querySelector('.card-title').textContent;
+        const doctorName = selectedDoctor.querySelector('.card-title').textContent;
+
+        summaryHtml = `
+            <div class="summary-item">
+                <span>Patient:</span>
+                <strong>${patientName}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Doctor:</span>
+                <strong>${doctorName}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Type:</span>
+                <strong>${appointmentType.replace('_', ' ').toUpperCase()}</strong>
+            </div>
+            <div class="summary-item">
+                <span>Priority:</span>
+                <span class="priority-badge priority-${priority}">${priority.toUpperCase()}</span>
+            </div>
+            ${scheduledDate ? `
+                <div class="summary-item">
+                    <span>Date & Time:</span>
+                    <strong>${formatLocalDateTime(scheduledDate)}</strong>
+                </div>
+            ` : ''}
+            <div class="summary-item">
+                <span>Duration:</span>
+                <strong>${duration} minutes</strong>
+            </div>
+            <div class="summary-item">
+                <span>Fee:</span>
+                <strong>$${parseFloat(fee).toFixed(2)}</strong>
+            </div>
+        `;
+    } else {
+        summaryHtml = `
+            <div class="text-muted text-center">
+                <i class="fas fa-info-circle"></i><br>
+                Select patient and doctor to see booking summary
+            </div>
+        `;
+    }
+
+    document.getElementById('summaryContent').innerHTML = summaryHtml;
+}
+
+// Update summary when form fields change
+document.getElementById('appointmentType').addEventListener('change', updateBookingSummary);
+document.getElementById('priority').addEventListener('change', updateBookingSummary);
+document.getElementById('scheduledDate').addEventListener('change', updateBookingSummary);
+document.getElementById('duration').addEventListener('change', updateBookingSummary);
+
+// Form validation
+document.getElementById('bookingForm').addEventListener('submit', function(e) {
+    const patientId = document.getElementById('selectedPatientId').value;
+    const doctorId = document.getElementById('selectedDoctorId').value;
+    const scheduledDate = document.getElementById('scheduledDate').value;
+
+    console.log('Form submission - scheduledDate value:', scheduledDate);
+
+    if (!patientId) {
+        e.preventDefault();
+        alert('Please select a patient');
+        return;
+    }
+
+    if (!doctorId) {
+        e.preventDefault();
+        alert('Please select a doctor');
+        return;
+    }
+
+    if (!scheduledDate) {
+        e.preventDefault();
+        alert('Please select a date and time');
+        return;
+    }
+
+    // Check if date is in the future (using local time parsing)
+    const [datePart, timePart] = scheduledDate.split('T');
+    const [year, month, day] = datePart.split('-');
+    const [hours, minutes] = timePart.split(':');
+    const selectedDateTime = new Date(year, month - 1, day, hours, minutes);
+    const now = new Date();
+
+    console.log('Datetime validation:', {
+        input: scheduledDate,
+        parsed: selectedDateTime,
+        now: now,
+        isValid: selectedDateTime > now
+    });
+
+    if (selectedDateTime <= now) {
+        e.preventDefault();
+        alert('Please select a future date and time');
+        return;
+    }
+});
+
+// Set minimum date to today (using local time)
+function setMinimumDateTime() {
+    const now = new Date();
+    // Get local datetime in YYYY-MM-DDTHH:MM format
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+
+    const localDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+    document.getElementById('scheduledDate').min = localDateTime;
+
+    console.log('Set minimum datetime to:', localDateTime);
+}
+
+setMinimumDateTime();
+
+// Initialize summary
+updateBookingSummary();
+</script>
+{% endblock %}

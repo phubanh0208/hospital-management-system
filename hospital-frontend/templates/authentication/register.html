@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Register - {{ hospital_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .register-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .register-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+        padding: 40px;
+        width: 100%;
+        max-width: 800px;
+        margin: 20px;
+    }
+    
+    .register-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .register-header h2 {
+        color: #333;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .register-header p {
+        color: #666;
+        margin-bottom: 0;
+    }
+    
+    .form-control:focus {
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 10px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    
+    .fieldset legend {
+        color: #333;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        padding-bottom: 5px;
+        border-bottom: 2px solid var(--brand-primary);
+    }
+    
+    .form-group label {
+        font-weight: 500;
+        color: #555;
+        margin-bottom: 5px;
+    }
+    
+    .help-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    
+    .login-link {
+        text-align: center;
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+    
+    .login-link a {
+        color: var(--brand-primary);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    
+    .login-link a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <h2><i class="fas fa-user-plus me-2"></i>Create Account</h2>
+            <p>Join {{ hospital_name }} - Fill in your information to get started</p>
+
+            <!-- Password Requirements -->
+            <div class="alert alert-info mt-3">
+                <h6><i class="fas fa-info-circle me-2"></i>Password Requirements:</h6>
+                <ul class="mb-0 small">
+                    <li>At least 8 characters long</li>
+                    <li>At least one uppercase letter (A-Z)</li>
+                    <li>At least one lowercase letter (a-z)</li>
+                    <li>At least one digit (0-9)</li>
+                    <li>At least one special character (!@#$%^&*)</li>
+                </ul>
+            </div>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post" class="needs-validation" novalidate>
+            {% csrf_token %}
+            {% crispy form %}
+        </form>
+        
+        <div class="login-link">
+            <p>Already have an account? <a href="{% url 'authentication:login' %}">Sign in here</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const forms = document.querySelectorAll('.needs-validation');
+    
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+    
+    // Password strength indicator
+    const passwordField = document.getElementById('id_password');
+    const confirmPasswordField = document.getElementById('id_confirm_password');
+    
+    if (passwordField) {
+        passwordField.addEventListener('input', function() {
+            const password = this.value;
+            const strength = getPasswordStrength(password);
+            updatePasswordStrength(strength);
+        });
+    }
+    
+    if (confirmPasswordField) {
+        confirmPasswordField.addEventListener('input', function() {
+            const password = passwordField.value;
+            const confirmPassword = this.value;
+            
+            if (password && confirmPassword) {
+                if (password === confirmPassword) {
+                    this.setCustomValidity('');
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else {
+                    this.setCustomValidity('Passwords do not match');
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            }
+        });
+    }
+    
+    function getPasswordStrength(password) {
+        let strength = 0;
+        let requirements = [];
+
+        if (password.length >= 8) {
+            strength++;
+        } else {
+            requirements.push('At least 8 characters');
+        }
+
+        if (/[a-z]/.test(password)) {
+            strength++;
+        } else {
+            requirements.push('One lowercase letter');
+        }
+
+        if (/[A-Z]/.test(password)) {
+            strength++;
+        } else {
+            requirements.push('One uppercase letter');
+        }
+
+        if (/[0-9]/.test(password)) {
+            strength++;
+        } else {
+            requirements.push('One digit');
+        }
+
+        if (/[!@#$%^&*]/.test(password)) {
+            strength++;
+        } else {
+            requirements.push('One special character (!@#$%^&*)');
+        }
+
+        return { strength, requirements };
+    }
+    
+    function updatePasswordStrength(strength) {
+        // This could be enhanced with a visual strength indicator
+        const strengthTexts = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+        const strengthColors = ['#dc3545', '#fd7e14', '#ffc107', '#20c997', '#28a745'];
+        
+        // You can add visual feedback here if needed
+    }
+});
+</script>
+{% endblock %}

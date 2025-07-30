@@ -1,0 +1,463 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Appointments Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .appointments-header {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .appointment-card {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 1rem;
+        border-left: 4px solid var(--brand-primary);
+        transition: all 0.3s ease;
+    }
+    
+    .appointment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .appointment-number {
+        font-weight: bold;
+        color: var(--brand-primary);
+        font-size: 1.1rem;
+    }
+    
+    .patient-info {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .doctor-info {
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .appointment-datetime {
+        background: var(--surface-page);
+        padding: 0.5rem;
+        border-radius: 5px;
+        font-weight: 500;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .status-scheduled {
+        background: rgba(30, 144, 255, 0.12);
+        color: #1e90ff;
+    }
+    
+    .status-confirmed {
+        background: rgba(32, 201, 151, 0.12);
+        color: #20c997;
+    }
+    
+    .status-completed {
+        background: rgba(108, 117, 125, 0.12);
+        color: #6c757d;
+    }
+    
+    .status-cancelled {
+        background: rgba(255, 71, 87, 0.12);
+        color: #ff4757;
+    }
+    
+    .filter-card {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
+    }
+    
+    .no-appointments {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+    
+    .stats-card {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1rem;
+        box-shadow: var(--shadow-sm);
+        text-align: center;
+    }
+    
+    .search-box {
+        position: relative;
+    }
+    
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
+        border-radius: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .search-result-item {
+        padding: 0.5rem;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .search-result-item:hover {
+        background: var(--surface-page);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Error Message -->
+    {% if error_message %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endif %}
+    
+    <!-- Appointments Header -->
+    <div class="appointments-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-calendar-check"></i> 
+                    Appointments Management
+                </h2>
+                <p class="mb-1">Manage patient appointments and scheduling</p>
+                <p class="mb-0">Total Appointments: {{ appointments|length }}</p>
+            </div>
+            <div class="col-md-4 text-right">
+                {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                <a href="{% url 'appointments:book' %}" class="btn btn-light mr-2">
+                    <i class="fas fa-plus"></i> Book Appointment
+                </a>
+                {% endif %}
+                <a href="{% url 'appointments:calendar' %}" class="btn btn-outline-light">
+                    <i class="fas fa-calendar-alt"></i> Calendar View
+                </a>
+                {% if user_role == 'patient' %}
+                <small class="text-light d-block mt-1">
+                    <i class="fas fa-info-circle"></i> Viewing your appointments only
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-9">
+            <!-- Filters -->
+            <div class="filter-card">
+                <h6 class="mb-3">
+                    <i class="fas fa-filter"></i> Filter Appointments
+                </h6>
+                
+                <form method="GET" class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-control">
+                            <option value="">All Status</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ filters.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ filters.date_to }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                            <a href="{% url 'appointments:list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Clear
+                            </a>
+                        </div>
+                    </div>
+                </form>
+                
+                <!-- Search Box -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="search-box">
+                            <input type="text" id="appointmentSearch" class="form-control" 
+                                   placeholder="Search appointments by number, patient, or doctor...">
+                            <div id="searchResults" class="search-results"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Appointments List -->
+            {% if appointments %}
+                {% for appointment in appointments %}
+                    <div class="appointment-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <div class="appointment-number">
+                                    {{ appointment.appointment_number|default:"N/A" }}
+                                </div>
+                                <div class="patient-info">
+                                    <i class="fas fa-user"></i> {{ appointment.patient_name|default:"Unknown Patient" }}
+                                </div>
+                                <small class="text-muted">{{ appointment.patient_phone|default:"" }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="doctor-info">
+                                    <i class="fas fa-user-md"></i> {{ appointment.doctor_name|default:"Unknown Doctor" }}
+                                    {% if appointment.doctor_specialization %}
+                                        <br><small class="text-info">({{ appointment.doctor_specialization }})</small>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ appointment.appointment_type|default:"consultation"|title }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="appointment-datetime">
+                                    <i class="fas fa-clock"></i>
+                                    {% if appointment.scheduled_date %}
+                                        {{ appointment.scheduled_date|date:"M d, Y" }}<br>
+                                        <small>{{ appointment.scheduled_date|date:"g:i A" }}</small>
+                                    {% else %}
+                                        Not scheduled
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">Duration: {{ appointment.duration_minutes|default:"30" }} min</small>
+                            </div>
+                            <div class="col-md-3 text-right">
+                                <span class="status-badge status-{{ appointment.status|default:'scheduled' }}">
+                                    {{ appointment.status|default:"Scheduled"|title }}
+                                </span>
+                                <div class="mt-2">
+                                    <a href="{% url 'appointments:detail' appointment.id %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                    {% if appointment.status != 'cancelled' and appointment.status != 'completed' %}
+                                        {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                                        <form method="POST" action="{% url 'appointments:cancel' appointment.id %}"
+                                              style="display: inline;" onsubmit="return confirm('Are you sure you want to cancel this appointment?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                        </form>
+                                        {% elif user_role == 'patient' %}
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle"></i> Contact staff to cancel
+                                        </small>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if appointment.reason %}
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <small class="text-muted">
+                                        <strong>Reason:</strong> {{ appointment.reason }}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                
+                <!-- Pagination -->
+                {% if pagination.totalPages > 1 %}
+                    <nav aria-label="Appointments pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if pagination.hasPrev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.currentPage|add:'-1' }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="page-item active">
+                                <span class="page-link">{{ pagination.currentPage }} of {{ pagination.totalPages }}</span>
+                            </li>
+                            
+                            {% if pagination.hasNext %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.currentPage|add:'1' }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="no-appointments">
+                    <i class="fas fa-calendar-times fa-3x mb-3 text-muted"></i>
+                    <h5>No Appointments Found</h5>
+                    <p class="text-muted">No appointments match your current filters.</p>
+                    {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                    <a href="{% url 'appointments:book' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Book First Appointment
+                    </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-3">
+            <!-- Quick Stats -->
+            <div class="stats-card mb-3">
+                <h6 class="mb-2">
+                    <i class="fas fa-chart-bar text-success"></i> Quick Stats
+                </h6>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ appointments|length }}</h4>
+                        <small>Total</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">0</h4>
+                        <small>Today</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="stats-card mb-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-tools text-success"></i> Quick Actions
+                </h6>
+                <div class="d-grid gap-2">
+                    {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                    <a href="{% url 'appointments:book' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Book Appointment
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'appointments:calendar' %}" class="btn btn-info">
+                        <i class="fas fa-calendar-alt"></i> Calendar View
+                    </a>
+                    {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                    <a href="{% url 'patients:list' %}" class="btn btn-primary">
+                        <i class="fas fa-users"></i> View Patients
+                    </a>
+                    {% endif %}
+
+                    {% if user_role == 'admin' or user_role == 'staff' %}
+                    <a href="{% url 'doctors:list' %}" class="btn btn-warning">
+                        <i class="fas fa-user-md"></i> View Doctors
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Status Legend -->
+            <div class="stats-card">
+                <h6 class="mb-2">
+                    <i class="fas fa-info-circle text-success"></i> Status Legend
+                </h6>
+                <div class="small">
+                    <div class="mb-1">
+                        <span class="status-badge status-scheduled">Scheduled</span> - Appointment booked
+                    </div>
+                    <div class="mb-1">
+                        <span class="status-badge status-confirmed">Confirmed</span> - Patient confirmed
+                    </div>
+                    <div class="mb-1">
+                        <span class="status-badge status-completed">Completed</span> - Visit finished
+                    </div>
+                    <div>
+                        <span class="status-badge status-cancelled">Cancelled</span> - Appointment cancelled
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Search functionality
+let searchTimeout;
+const searchInput = document.getElementById('appointmentSearch');
+const searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    
+    if (query.length < 2) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`{% url 'appointments:search_api' %}?q=${encodeURIComponent(query)}&limit=5`)
+            .then(response => response.json())
+            .then(data => {
+                displaySearchResults(data.results || []);
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResults.style.display = 'none';
+            });
+    }, 300);
+});
+
+function displaySearchResults(results) {
+    if (results.length === 0) {
+        searchResults.style.display = 'none';
+        return;
+    }
+    
+    const html = results.map(result => `
+        <div class="search-result-item" onclick="selectAppointment('${result.id}')">
+            <strong>${result.appointment_number}</strong><br>
+            <small>${result.patient_name} with ${result.doctor_name}</small><br>
+            <small class="text-muted">${result.scheduled_date} - ${result.status}</small>
+        </div>
+    `).join('');
+    
+    searchResults.innerHTML = html;
+    searchResults.style.display = 'block';
+}
+
+function selectAppointment(appointmentId) {
+    window.location.href = `{% url 'appointments:detail' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', appointmentId);
+}
+
+// Hide search results when clicking outside
+document.addEventListener('click', function(event) {
+    if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+        searchResults.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

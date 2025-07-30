@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Appointment Calendar{% endblock %}
+
+{% block extra_css %}
+<style>
+    .calendar-header {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-accent) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .calendar-container {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+    }
+    
+    .calendar-navigation {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-default);
+    }
+    
+    .month-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--brand-primary);
+    }
+    
+    .nav-button {
+        background: var(--brand-primary);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-button:hover {
+        background: #7b6df0;
+        transform: scale(1.1);
+    }
+    
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: var(--border-default);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .calendar-day-header {
+        background: var(--brand-primary);
+        color: white;
+        padding: 1rem;
+        text-align: center;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .calendar-day {
+        background: var(--surface-card);
+        min-height: 120px;
+        padding: 0.5rem;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    .calendar-day:hover {
+        background: var(--surface-page);
+    }
+    
+    .calendar-day.other-month {
+        background: var(--surface-page);
+        color: var(--text-muted);
+    }
+    
+    .calendar-day.today {
+        background: rgba(255, 209, 102, 0.15);
+        border: 2px solid var(--brand-accent-2);
+    }
+    
+    .day-number {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    
+    .appointment-item {
+        background: rgba(108, 92, 231, 0.08);
+        border-left: 3px solid var(--brand-primary);
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 0.25rem;
+        border-radius: 3px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .appointment-item:hover {
+        background: rgba(108, 92, 231, 0.14);
+        transform: translateX(2px);
+    }
+    
+    .appointment-item.status-confirmed {
+        background: rgba(32, 201, 151, 0.12);
+        border-left-color: #20c997;
+    }
+    
+    .appointment-item.status-completed {
+        background: rgba(30, 144, 255, 0.12);
+        border-left-color: #1e90ff;
+    }
+    
+    .appointment-item.status-cancelled {
+        background: rgba(255, 71, 87, 0.12);
+        border-left-color: #ff4757;
+    }
+    
+    .appointment-time {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .appointment-patient {
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Status Legend Styles */
+    .status-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 3px;
+        border-left: 3px solid;
+    }
+
+    .legend-color.status-scheduled {
+        background: rgba(30, 144, 255, 0.12);
+        border-left-color: #1e90ff;
+    }
+
+    .legend-color.status-confirmed {
+        background: rgba(32, 201, 151, 0.12);
+        border-left-color: #20c997;
+    }
+
+    .legend-color.status-completed {
+        background: rgba(108, 117, 125, 0.12);
+        border-left-color: #6c757d;
+    }
+
+    .legend-color.status-cancelled {
+        background: rgba(255, 71, 87, 0.12);
+        border-left-color: #ff4757;
+    }
+    
+    .legend {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 1.5rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 12px;
+        margin-right: 0.5rem;
+        border-radius: 2px;
+    }
+    
+    .stats-card {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        text-align: center;
+    }
+    
+    .no-appointments {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-secondary);
+        grid-column: 1 / -1;
+    }
+    
+    @media (max-width: 768px) {
+        .calendar-day {
+            min-height: 80px;
+            padding: 0.25rem;
+        }
+        
+        .appointment-item {
+            font-size: 0.65rem;
+            padding: 0.125rem 0.25rem;
+        }
+        
+        .day-number {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Error Message -->
+    {% if error_message %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endif %}
+    
+    <!-- Calendar Header -->
+    <div class="calendar-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-calendar-alt"></i> 
+                    Appointment Calendar
+                </h2>
+                <p class="mb-1">Visual overview of scheduled appointments</p>
+                <p class="mb-0">{{ month_name }} {{ current_year }}</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="{% url 'appointments:list' %}" class="btn btn-light mr-2">
+                    <i class="fas fa-list"></i> List View
+                </a>
+                {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                <a href="{% url 'appointments:book' %}" class="btn btn-outline-light">
+                    <i class="fas fa-plus"></i> Book Appointment
+                </a>
+                {% endif %}
+                {% if user_role == 'patient' %}
+                <small class="text-light d-block mt-1">
+                    <i class="fas fa-info-circle"></i> Viewing your appointments only
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-9">
+            <!-- Calendar -->
+            <div class="calendar-container">
+                <!-- Navigation -->
+                <div class="calendar-navigation">
+                    <a href="?year={{ prev_month.year }}&month={{ prev_month.month }}" class="nav-button">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                    
+                    <div class="month-title">
+                        {{ month_name }} {{ current_year }}
+                    </div>
+                    
+                    <a href="?year={{ next_month.year }}&month={{ next_month.month }}" class="nav-button">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+                
+                <!-- Calendar Grid -->
+                <div class="calendar-grid">
+                    <!-- Day Headers -->
+                    <div class="calendar-day-header">Sunday</div>
+                    <div class="calendar-day-header">Monday</div>
+                    <div class="calendar-day-header">Tuesday</div>
+                    <div class="calendar-day-header">Wednesday</div>
+                    <div class="calendar-day-header">Thursday</div>
+                    <div class="calendar-day-header">Friday</div>
+                    <div class="calendar-day-header">Saturday</div>
+                    
+                    <!-- Calendar Days -->
+                    {% load calendar_tags %}
+                    {% get_calendar current_year current_month as calendar_days %}
+                    
+                    {% for week in calendar_days %}
+                        {% for day in week %}
+                            <div class="calendar-day {% if day.other_month %}other-month{% endif %} {% if day.is_today %}today{% endif %}"
+                                 data-date="{{ day.date|date:'Y-m-d' }}">
+                                <div class="day-number">{{ day.day }}</div>
+
+                                <!-- Debug: Show date key -->
+                                {% with date_key=day.date|date:'Y-m-d' %}
+                                    <!-- Debug info (remove in production) -->
+                                    {% comment %}
+                                    <small style="color: red; font-size: 10px;">
+                                        Date: {{ date_key }}<br>
+                                        Has appointments: {% if date_key in appointments_by_date %}YES{% else %}NO{% endif %}<br>
+                                        Count: {{ appointments_by_date|get_item:date_key|length }}
+                                    </small>
+                                    {% endcomment %}
+
+                                    {% if date_key in appointments_by_date %}
+                                        {% for appointment in appointments_by_date|get_item:date_key %}
+                                            <div class="appointment-item status-{{ appointment.status|default:'scheduled' }}"
+                                                 onclick="viewAppointment('{{ appointment.id }}')">
+                                                <div class="appointment-time">
+                                                    {% if appointment.scheduled_date %}
+                                                        {{ appointment.scheduled_date|date:"g:i A" }}
+                                                    {% else %}
+                                                        TBD
+                                                    {% endif %}
+                                                </div>
+                                                <div class="appointment-patient">
+                                                    {{ appointment.patient_name|default:"Unknown"|truncatechars:15 }}
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endwith %}
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <!-- Legend -->
+            <div class="legend">
+                <h6 class="mb-3">
+                    <i class="fas fa-info-circle"></i> Status Legend
+                </h6>
+                
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #e7f3ff; border-left: 3px solid #007bff;"></div>
+                    <span>Scheduled</span>
+                </div>
+                
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #d4edda; border-left: 3px solid #28a745;"></div>
+                    <span>Confirmed</span>
+                </div>
+                
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #d1ecf1; border-left: 3px solid #17a2b8;"></div>
+                    <span>Completed</span>
+                </div>
+                
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f8d7da; border-left: 3px solid #dc3545;"></div>
+                    <span>Cancelled</span>
+                </div>
+            </div>
+            
+            <!-- Monthly Stats -->
+            <div class="stats-card mb-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-chart-bar"></i> This Month
+                </h6>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ days_with_appointments|default:0 }}</h4>
+                        <small>Days with Appointments</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ total_appointments|default:0 }}</h4>
+                        <small>Total Appointments</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Status Legend -->
+            <div class="stats-card mb-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-info-circle"></i> Status Legend
+                </h6>
+
+                <div class="status-legend">
+                    <div class="legend-item">
+                        <div class="legend-color status-scheduled"></div>
+                        <span>Scheduled</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color status-confirmed"></div>
+                        <span>Confirmed</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color status-completed"></div>
+                        <span>Completed</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color status-cancelled"></div>
+                        <span>Cancelled</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="stats-card">
+                <h6 class="mb-3">
+                    <i class="fas fa-tools"></i> Quick Actions
+                </h6>
+
+                <div class="d-grid gap-2">
+                    {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
+                    <a href="{% url 'appointments:book' %}" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Book Appointment
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'appointments:list' %}" class="btn btn-primary">
+                        <i class="fas fa-list"></i> View All Appointments
+                    </a>
+                    <button class="btn btn-info" onclick="goToToday()">
+                        <i class="fas fa-calendar-day"></i> Go to Today
+                    </button>
+                    <button class="btn btn-secondary" onclick="printCalendar()">
+                        <i class="fas fa-print"></i> Print Calendar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewAppointment(appointmentId) {
+    window.location.href = `{% url 'appointments:detail' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', appointmentId);
+}
+
+function goToToday() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+    window.location.href = `?year=${year}&month=${month}`;
+}
+
+function printCalendar() {
+    window.print();
+}
+
+// Add click handler for empty calendar days
+document.querySelectorAll('.calendar-day').forEach(day => {
+    day.addEventListener('click', function(e) {
+        // Only trigger if clicking on the day itself, not an appointment
+        if (e.target === this || e.target.classList.contains('day-number')) {
+            const date = this.dataset.date;
+            if (date && !this.classList.contains('other-month')) {
+                // Redirect to book appointment with pre-selected date
+                const bookUrl = `{% url 'appointments:book' %}?date=${date}`;
+                window.location.href = bookUrl;
+            }
+        }
+    });
+});
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowLeft') {
+        document.querySelector('.calendar-navigation a:first-child').click();
+    } else if (e.key === 'ArrowRight') {
+        document.querySelector('.calendar-navigation a:last-child').click();
+    }
+});
+</script>
+{% endblock %}
