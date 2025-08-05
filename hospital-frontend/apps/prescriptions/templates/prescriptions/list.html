@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load prescription_extras %}
+
+{% block title %}Prescription Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .prescription-card {
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-sm);
+        margin-bottom: 1rem;
+        transition: box-shadow 0.2s, transform 0.2s;
+        background: var(--surface-card);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .prescription-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    .prescription-header {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    }
+    
+    .prescription-body {
+        padding: 1rem;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .status-draft { background-color: #f8f9fa; color: #6c757d; }
+    .status-active { background-color: #d4edda; color: #155724; }
+    .status-dispensed { background-color: #d1ecf1; color: #0c5460; }
+    .status-completed { background-color: #d1ecf1; color: #0c5460; }
+    .status-cancelled { background-color: #f8d7da; color: #721c24; }
+    .status-expired { background-color: #fff3cd; color: #856404; }
+    
+    .filter-card {
+        background: var(--surface-page);
+        border-radius: var(--radius-sm);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-row {
+        background: var(--surface-card);
+        border-radius: var(--radius-sm);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: var(--brand-primary);
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .medication-list {
+        max-height: 100px;
+        overflow-y: auto;
+        font-size: 0.875rem;
+    }
+    
+    .medication-item {
+        padding: 0.25rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .medication-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">💊 Prescription Management</h1>
+            <p class="text-muted">Manage electronic prescriptions and medication orders</p>
+        </div>
+        <div>
+            {% if user_role == 'admin' or user_role == 'doctor' %}
+            <a href="{% url 'prescriptions:patient_selection' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Prescription
+            </a>
+            {% elif user_role == 'staff' %}
+            <span class="badge bg-warning text-dark">
+                <i class="fas fa-eye"></i> View Only Access
+            </span>
+            {% elif user_role == 'patient' %}
+            <span class="badge bg-info">
+                <i class="fas fa-user"></i> Your Prescriptions
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    <div class="stats-row">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="stat-item">
+                    <div class="stat-number">{{ prescriptions|length }}</div>
+                    <div class="stat-label">Total Prescriptions</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-item">
+                    <div class="stat-number">
+                        {{ prescriptions|length }}
+                    </div>
+                    <div class="stat-label">This Month</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-item">
+                    <div class="stat-number text-success">
+                        {% for p in prescriptions %}{% if p.status == 'dispensed' %}1{% endif %}{% endfor %}
+                    </div>
+                    <div class="stat-label">Dispensed</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-item">
+                    <div class="stat-number text-info">
+                        {% for p in prescriptions %}{% if p.status == 'active' %}1{% endif %}{% endfor %}
+                    </div>
+                    <div class="stat-label">Active</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-item">
+                    <div class="stat-number text-warning">
+                        {% for p in prescriptions %}{% if p.status == 'draft' %}1{% endif %}{% endfor %}
+                    </div>
+                    <div class="stat-label">Draft</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-item">
+                    <div class="stat-number text-danger">
+                        {% for p in prescriptions %}{% if p.status == 'expired' %}1{% endif %}{% endfor %}
+                    </div>
+                    <div class="stat-label">Expired</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" 
+                       value="{{ current_filters.search }}" 
+                       placeholder="Search prescriptions...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Doctor</label>
+                <select class="form-select" name="doctor_id">
+                    <option value="">All Doctors</option>
+                    {% for doctor in doctors %}
+                        <option value="{{ doctor.id }}" {% if current_filters.doctor_id == doctor.id %}selected{% endif %}>
+                            {{ doctor.username }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">From Date</label>
+                <input type="date" class="form-control" name="date_from" 
+                       value="{{ current_filters.date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">To Date</label>
+                <input type="date" class="form-control" name="date_to" 
+                       value="{{ current_filters.date_to }}">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Prescriptions List -->
+    <div class="row">
+        {% for prescription in prescriptions %}
+            <div class="col-12">
+                <div class="prescription-card">
+                    <div class="prescription-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <h5 class="mb-0">{{ prescription.prescription_number }}</h5>
+                                <small class="issued-date" data-iso="{{ prescription.issued_date }}">{{ prescription.issued_date|default:"N/A" }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>{{ prescription.patient_name }}</strong>
+                                <br><small>Age: {{ prescription.patient_age|default:"N/A" }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Dr. {{ prescription.doctor_name }}</strong>
+                                <br><small>{{ prescription.diagnosis|truncatechars:30 }}</small>
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <span class="status-badge status-{{ prescription.status }}">
+                                    {{ prescription.status|title }}
+                                </span>
+                                {% if prescription.total_amount and prescription.total_amount != "0.00" %}
+                                <br>
+                                <small class="text-light">
+                                    <i class="fas fa-money-bill"></i>
+                                    Total: {{ prescription.total_amount|floatformat:0 }} {{ prescription.currency|default:"VND" }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="prescription-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Medications:</h6>
+                                <div class="medication-list">
+                                    {% for item in prescription.items %}
+                                        <div class="medication-item mb-2">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="medication-info">
+                                                    <strong class="medication-name">{{ item.medication_name|default:"Unknown Medication" }}</strong>
+                                                    {% if item.medication_code %}
+                                                        <small class="text-muted">({{ item.medication_code }})</small>
+                                                    {% endif %}
+                                                    <br>
+                                                    <span class="dosage-info">
+                                                        <i class="fas fa-pills text-primary"></i>
+                                                        {{ item.dosage|default:"N/A" }}
+                                                    </span>
+                                                    <br>
+                                                    <small class="frequency-info">
+                                                        <i class="fas fa-clock text-info"></i>
+                                                        {{ item.frequency|default:"N/A" }} for {{ item.duration|default:"N/A" }}
+                                                    </small>
+                                                </div>
+                                                <div class="quantity-info text-end">
+                                                    <span class="badge bg-secondary">
+                                                        {{ item.quantity|default:"0" }} {{ item.unit|default:"unit" }}
+                                                    </span>
+                                                    {% if item.unit_price and item.unit_price != "0.00" %}
+                                                        <br><small class="text-success">{{ item.unit_price }} VND/{{ item.unit|default:"unit" }}</small>
+                                                    {% endif %}
+                                                    {% if item.total_price and item.total_price != "0.00" %}
+                                                        <br><small class="text-success fw-bold">Total: {{ item.total_price }} VND</small>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% if item.instructions %}
+                                                <div class="mt-1">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-info-circle"></i>
+                                                        {{ item.instructions }}
+                                                    </small>
+                                                </div>
+                                            {% endif %}
+                                            {% if item.warnings %}
+                                                <div class="mt-1">
+                                                    <small class="text-warning">
+                                                        <i class="fas fa-exclamation-triangle"></i>
+                                                        {{ item.warnings }}
+                                                    </small>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        {% if not forloop.last %}
+                                            <hr class="my-2">
+                                        {% endif %}
+                                    {% empty %}
+                                        <div class="text-center py-3">
+                                            <i class="fas fa-pills text-muted fa-2x mb-2"></i>
+                                            <br>
+                                            <small class="text-muted">No medications listed</small>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <small class="text-muted">Valid Until:</small>
+                                <br><strong class="valid-until-date" data-iso="{{ prescription.valid_until }}">{{ prescription.valid_until|default:"N/A" }}</strong>
+                                {% if prescription.dispensed_date %}
+                                    <br><small class="text-muted">Dispensed:</small>
+                                    <br><small class="dispensed-date" data-iso="{{ prescription.dispensed_date }}">{{ prescription.dispensed_date|default:"N/A" }}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 text-end">
+                                <div class="btn-group" role="group">
+                                    {% if user_role == 'patient' %}
+                                        <a href="{% url 'prescriptions:print' prescription.id %}"
+                                           class="btn btn-outline-secondary btn-sm" target="_blank">
+                                            <i class="fas fa-print"></i> Print
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'prescriptions:detail' prescription.id %}"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <a href="{% url 'prescriptions:print' prescription.id %}"
+                                           class="btn btn-outline-secondary btn-sm" target="_blank">
+                                            <i class="fas fa-print"></i> Print
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-prescription-bottle fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No Prescriptions Found</h4>
+                    <p class="text-muted">No prescriptions match your current filters.</p>
+                    {% if user_role == 'admin' or user_role == 'doctor' %}
+                    <a href="{% url 'prescriptions:patient_selection' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create First Prescription
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.totalPages > 1 %}
+        <nav aria-label="Prescription pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if pagination.hasPrev %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.currentPage|add:'-1' }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Previous
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ pagination.currentPage }} of {{ pagination.totalPages }}
+                    </span>
+                </li>
+                
+                {% if pagination.hasNext %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.currentPage|add:'1' }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Next
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Format ISO dates
+    function formatISODate(isoString, includeTime = false) {
+        if (!isoString || isoString === 'N/A') return 'N/A';
+
+        try {
+            const date = new Date(isoString);
+            if (isNaN(date.getTime())) return 'N/A';
+
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+
+            if (includeTime) {
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${day}/${month}/${year} ${hours}:${minutes}`;
+            } else {
+                return `${day}/${month}/${year}`;
+            }
+        } catch (e) {
+            return 'N/A';
+        }
+    }
+
+    // Format all date elements
+    $('.valid-until-date').each(function() {
+        const isoDate = $(this).data('iso');
+        if (isoDate) {
+            $(this).text(formatISODate(isoDate, false));
+        }
+    });
+
+    $('.dispensed-date').each(function() {
+        const isoDate = $(this).data('iso');
+        if (isoDate) {
+            $(this).text(formatISODate(isoDate, true));
+        }
+    });
+
+    $('.issued-date').each(function() {
+        const isoDate = $(this).data('iso');
+        if (isoDate) {
+            $(this).text(formatISODate(isoDate, true));
+        }
+    });
+});
+</script>
+{% endblock %}
