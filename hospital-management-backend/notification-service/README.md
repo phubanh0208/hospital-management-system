@@ -1,8 +1,15 @@
 # Notification Service
 
-**Status**: ✅ OPERATIONAL WITH RABBITMQ INTEGRATION
+**Status**: ✅ FULLY OPERATIONAL - MongoDB Authentication & API Working
 
 The Notification Service is a comprehensive microservice for managing notifications, alerts, and communications in the Hospital Management System. It supports multiple delivery channels (web, email, SMS) and provides template-based messaging with real-time delivery tracking.
+
+### ✅ Recent Fixes (August 2025)
+- **MongoDB Authentication**: Fixed connection string with proper credentials and authSource
+- **API Gateway Integration**: Authentication middleware added to notification routes
+- **User Context**: Proper user ID extraction from JWT tokens implemented
+- **Input Validation**: Enhanced validation for all required fields (recipient_type, etc.)
+- **Authorization**: All notification endpoints now properly authenticated
 
 ## 🚀 Quick Start
 

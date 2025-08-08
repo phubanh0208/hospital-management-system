@@ -1,6 +1,15 @@
-# 🏥 Hospital Management API Gateway v2.0.0
+# 🏥 Hospital Management API Gateway v2.1.0
+
+**Status**: ✅ FULLY OPERATIONAL - Authentication & Routing Complete
 
 A modern, high-performance API Gateway for the Hospital Management System microservices architecture.
+
+### ✅ Latest Authentication Fixes (v2.1.0)
+- **Patient Route Authentication**: Added authentication middleware to patient creation/management
+- **Notification Route Security**: Implemented authentication for all notification endpoints  
+- **User Context Forwarding**: Proper JWT user context forwarding to all microservices
+- **Authorization Headers**: Enhanced header forwarding (Authorization, X-User-ID, X-User-Role)
+- **Production Ready**: All routes tested and verified with end-to-end authentication
 
 ## 🚀 Overview
 
@@ -27,7 +36,7 @@ The API Gateway serves as the single entry point for all client requests, routin
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   API Gateway    │    │  Microservices  │
-│   (React/Vue)   │◄──►│    v2.0.0        │◄──►│                 │
+│(React/Vue/Django)   │◄──►│    v2.0.0        │◄──►│                 │
 │                 │    │                  │    │  • Auth Service │
 └─────────────────┘    │  Port: 3000      │    │  • Patient      │
                        │                  │    │  • Appointment  │

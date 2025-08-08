@@ -26,3 +26,4 @@ router.get('/dashboard', analyticsController.getDashboardSummary);
 router.post('/refresh', analyticsController.refreshViews);
 
 export default router;
+

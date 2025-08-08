@@ -20,7 +20,7 @@ Hệ thống gồm 6 microservices chính:
 - **Express.js** framework
 - **PostgreSQL** cho các services chính
 - **MongoDB** cho notification service
-- **Redis** cho caching
+- **Redis** cho caching (Đang phát triển)
 - **RabbitMQ** cho message queue
 - **JWT** cho authentication
 - **Docker & Docker Compose** cho containerization
@@ -43,7 +43,7 @@ Hệ thống gồm 6 microservices chính:
 
 #### Bước 1: Clone và chuẩn bị
 ```bash
-git clone <repository-url>
+git clone https://github.com/phubanh0208/hospital-management-system.git
 cd hospital-management
 ```
 
@@ -176,6 +176,8 @@ cd hospital-management-backend
   - Email: `admin@hospital.com`
   - Password: `admin123`
 - **Mongo Express**: http://localhost:8081
+  - Username: `admin`
+  - Password: `admin123`
 - **RabbitMQ Management**: http://localhost:15672
   - Username: `hospital`
   - Password: `hospital_mq_123`

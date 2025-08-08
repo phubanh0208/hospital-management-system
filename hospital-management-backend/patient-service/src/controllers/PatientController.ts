@@ -95,12 +95,27 @@ export class PatientController {
         return;
       }
 
-      // TODO: Get user ID from JWT token
-      const createdByUserId = req.body.createdByUserId || 'temp-user-id';
+      // Get user ID from authenticated request (set by API Gateway auth middleware)
+      const user = (req as any).user;
+      let userId = user?.id;
+      
+      // Fallback: try to get user ID from headers (for API Gateway forwarding)
+      if (!userId) {
+        userId = req.headers['x-user-id'] as string;
+      }
+      
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          message: 'Authentication required',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
 
       const result = await this.patientService.createPatient({
         ...patientData,
-        createdByUserId
+        createdByUserId: userId
       });
       
       if (!result.success) {

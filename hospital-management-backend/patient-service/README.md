@@ -1,8 +1,14 @@
 # Patient Service
 
-**Status**: ✅ FULLY TESTED AND OPERATIONAL
+**Status**: ✅ FULLY OPERATIONAL - Phone Validation & Authentication Working
 
 The Patient Service is a core microservice of the Hospital Management System responsible for managing patient information, medical history, and visit summaries.
+
+### ✅ Recent Fixes (August 2025)
+- **Phone Number Validation**: Fixed to comply with Vietnamese phone number format regex
+- **User Authentication**: Proper JWT token handling and user context extraction
+- **API Gateway Integration**: All endpoints properly authenticated through gateway
+- **Database Connection**: PostgreSQL connection optimized and stable
 
 ## 🚀 Quick Start
 

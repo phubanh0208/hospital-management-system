@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { authenticate, AuthenticatedRequest } from './middleware/auth';
 
 // Load environment variables
 dotenv.config();
@@ -399,13 +400,16 @@ app.get('/api/patients/:id', async (req, res) => {
 });
 
 // Create patient
-app.post('/api/patients', async (req, res) => {
+app.post('/api/patients', authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     console.log('➕ Create Patient Request');
     const response = await fetch(`${getServiceUrl('patient')}/api/patients`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || '',
+        'X-User-ID': req.user?.id || '',
+        'X-User-Role': req.user?.role || ''
       },
       body: JSON.stringify(req.body)
     });
@@ -672,10 +676,20 @@ app.get('/api/medications', async (req, res) => {
 // ======================
 
 // Get notifications
-app.get('/api/notifications', async (req, res) => {
+app.get('/api/notifications', authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     console.log('🔔 Get Notifications Request');
-    const response = await fetch(`${getServiceUrl('notification')}/api/notifications`);
+    const userId = req.user!.id;
+    const queryString = new URLSearchParams({ 
+      userId, 
+      ...Object.fromEntries(Object.entries(req.query).map(([k, v]) => [k, String(v)]))
+    });
+    const response = await fetch(`${getServiceUrl('notification')}/api/notifications?${queryString}`, {
+      headers: { 
+        'Authorization': req.headers.authorization || '',
+        'Content-Type': 'application/json'
+      }
+    });
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (error) {

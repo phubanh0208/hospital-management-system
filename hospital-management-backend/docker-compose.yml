@@ -128,11 +128,11 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3004
-      - DB_HOST=hospital-prescription-db
-      - DB_PORT=5432
-      - DB_NAME=prescription_service_db
-      - DB_USER=prescription_user
-      - DB_PASSWORD=prescription_password_123
+      - PRESCRIPTION_DB_HOST=hospital-prescription-db
+      - PRESCRIPTION_DB_PORT=5432
+      - PRESCRIPTION_DB_NAME=prescription_service_db
+      - PRESCRIPTION_DB_USER=prescription_user
+      - PRESCRIPTION_DB_PASSWORD=prescription_password_123
       - DB_MAX_CONNECTIONS=20
       - LOG_LEVEL=info
     # depends_on:
@@ -159,7 +159,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3005
-      - MONGODB_URI=mongodb://hospital-notification-db:27017/notification_service_db
+      - MONGODB_URI=mongodb://notification_user:notification_password_123@hospital-notification-db:27017/notification_service_db?authSource=admin
       - RABBITMQ_URL=amqp://hospital:hospital_mq_123@hospital-rabbitmq:5672/hospital_vhost
       - NOTIFICATION_QUEUE=notification_queue
       - NOTIFICATION_EXCHANGE=notification_exchange

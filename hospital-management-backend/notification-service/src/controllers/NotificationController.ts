@@ -12,7 +12,9 @@ export class NotificationController {
   // GET /api/notifications
   public getNotifications = async (req: Request, res: Response): Promise<void> => {
     try {
-      const userId = req.query.userId as string;
+      // Get user ID from authenticated request (set by API Gateway auth middleware)
+      const user = (req as any).user;
+      const userId = user?.id || (req.query.userId as string);
       
       if (!userId) {
         res.status(400).json(createErrorResponse('User ID is required'));
