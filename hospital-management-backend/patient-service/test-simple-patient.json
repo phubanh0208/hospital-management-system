@@ -1,0 +1,18 @@
+{
+  "fullName": "Test Patient Simple",
+  "dateOfBirth": "1990-01-15",
+  "gender": "male",
+  "phone": "0988123456",
+  "address": {
+    "street": "123 Test Street",
+    "ward": "Ward 1",
+    "district": "District 1",
+    "city": "Ho Chi Minh City"
+  },
+  "emergencyContact": {
+    "name": "Test Contact",
+    "phone": "0988654321",
+    "relationship": "Family"
+  },
+  "createdByUserId": "11111111-1111-1111-1111-111111111111"
+}

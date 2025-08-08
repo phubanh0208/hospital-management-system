@@ -1,0 +1,57 @@
+# Multi-stage Dockerfile for Patient Service
+# Build context: hospital-management-backend/
+
+FROM node:18-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Build shared package first
+COPY shared/ ./shared/
+WORKDIR /app/shared
+RUN npm install && npm run build
+
+# Build patient service
+WORKDIR /app
+COPY patient-service/ ./patient-service/
+WORKDIR /app/patient-service
+RUN npm install && npm run build
+
+# Production stage
+FROM node:18-alpine AS production
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache dumb-init
+
+# Copy built shared package
+COPY --from=builder /app/shared/dist/ ./shared/dist/
+COPY --from=builder /app/shared/package.json ./shared/
+
+# Copy built patient service
+COPY --from=builder /app/patient-service/dist/ ./dist/
+COPY --from=builder /app/patient-service/package*.json ./
+
+# Install only production dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S patient -u 1001
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R patient:nodejs /app
+USER patient
+
+EXPOSE 3002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3002/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]

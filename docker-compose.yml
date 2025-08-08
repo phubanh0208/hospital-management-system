@@ -1,0 +1,237 @@
+services:
+  # ======================
+  # DATABASES
+  # ======================
+  
+  # Auth Service Database
+  auth-db:
+    image: postgres:15-alpine
+    container_name: hospital-auth-db
+    environment:
+      POSTGRES_DB: auth_service_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password_123
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+      - ./database/init/auth-init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_service_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # Patient Service Database  
+  patient-db:
+    image: postgres:15-alpine
+    container_name: hospital-patient-db
+    environment:
+      POSTGRES_DB: patient_service_db
+      POSTGRES_USER: patient_user
+      POSTGRES_PASSWORD: patient_password_123
+    volumes:
+      - patient_db_data:/var/lib/postgresql/data
+      - ./database/init/patient-init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U patient_user -d patient_service_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # Appointment Service Database
+  appointment-db:
+    image: postgres:15-alpine
+    container_name: hospital-appointment-db
+    environment:
+      POSTGRES_DB: appointment_service_db
+      POSTGRES_USER: appointment_user
+      POSTGRES_PASSWORD: appointment_password_123
+    volumes:
+      - appointment_db_data:/var/lib/postgresql/data
+      - ./database/init/appointment-init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appointment_user -d appointment_service_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # Prescription Service Database
+  prescription-db:
+    image: postgres:15-alpine
+    container_name: hospital-prescription-db
+    environment:
+      POSTGRES_DB: prescription_service_db
+      POSTGRES_USER: prescription_user
+      POSTGRES_PASSWORD: prescription_password_123
+    volumes:
+      - prescription_db_data:/var/lib/postgresql/data
+      - ./database/init/prescription-init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prescription_user -d prescription_service_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # Notification Service Database (MongoDB)
+  notification-db:
+    image: mongo:7-jammy
+    container_name: hospital-notification-db
+    environment:
+      MONGO_INITDB_DATABASE: notification_service_db
+      MONGO_INITDB_ROOT_USERNAME: notification_user
+      MONGO_INITDB_ROOT_PASSWORD: notification_password_123
+    volumes:
+      - notification_db_data:/data/db
+      - ./database/init/notification-init.js:/docker-entrypoint-initdb.d/init.js
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # Analytics Database (TimescaleDB)
+  analytics-db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: hospital-analytics-db
+    environment:
+      POSTGRES_DB: analytics_service_db
+      POSTGRES_USER: analytics_user
+      POSTGRES_PASSWORD: analytics_password_123
+    volumes:
+      - analytics_db_data:/var/lib/postgresql/data
+      - ./database/init/analytics-init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5436:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics_user -d analytics_service_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # ======================
+  # MESSAGE QUEUE & CACHE
+  # ======================
+
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: hospital-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: hospital
+      RABBITMQ_DEFAULT_PASS: hospital_mq_123
+      RABBITMQ_DEFAULT_VHOST: hospital_vhost
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: hospital-redis
+    command: redis-server --requirepass redis_password_123 --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hospital-network
+
+  # ======================
+  # MONITORING (Optional)
+  # ======================
+
+  # Database Admin Tool
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: hospital-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@hospital.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "8080:80"
+    depends_on:
+      - auth-db
+      - patient-db
+      - appointment-db
+      - prescription-db
+    networks:
+      - hospital-network
+
+  # MongoDB Admin
+  mongo-express:
+    image: mongo-express:latest
+    container_name: hospital-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: notification_user
+      ME_CONFIG_MONGODB_ADMINPASSWORD: notification_password_123
+      ME_CONFIG_MONGODB_URL: mongodb://notification_user:notification_password_123@notification-db:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - notification-db
+    networks:
+      - hospital-network
+
+# ======================
+# NETWORKS & VOLUMES
+# ======================
+
+networks:
+  hospital-network:
+    name: hospital-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  auth_db_data:
+  patient_db_data:
+  appointment_db_data:
+  prescription_db_data:
+  notification_db_data:
+  analytics_db_data:
+  rabbitmq_data:
+  redis_data:
+  pgadmin_data:

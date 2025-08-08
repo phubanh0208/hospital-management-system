@@ -1,0 +1,27 @@
+{
+  "fullName": "Nguyễn Văn Test",
+  "dateOfBirth": "1990-01-15",
+  "gender": "male",
+  "phone": "0909876543",
+  "email": "testpatient@email.com",
+  "address": {
+    "street": "123 Đường Test",
+    "ward": "Phường 1",
+    "district": "Quận 1",
+    "city": "TP.HCM"
+  },
+  "bloodType": "A+",
+  "allergies": "Không có dị ứng đặc biệt",
+  "medicalHistory": "Tiền sử khỏe mạnh",
+  "emergencyContact": {
+    "name": "Nguyễn Thị B",
+    "phone": "0907654321",
+    "relationship": "Vợ"
+  },
+  "insuranceInfo": {
+    "provider": "Bảo hiểm Y tế",
+    "policyNumber": "123456789",
+    "expiryDate": "2025-12-31"
+  },
+  "createdByUserId": "af92faa6-8e1a-4f05-9471-d45d8d772eb8"
+}
