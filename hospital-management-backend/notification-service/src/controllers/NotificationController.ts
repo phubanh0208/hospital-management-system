@@ -233,4 +233,201 @@ export class NotificationController {
       res.status(500).json(createErrorResponse('Failed to cleanup expired notifications'));
     }
   };
+
+  // ========== ASYNC ENDPOINTS ==========
+
+  // POST /api/notifications/async
+  public createNotificationAsync = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const notificationData: CreateNotificationData = req.body;
+
+      // Validate required fields
+      if (!notificationData.recipient_user_id || !notificationData.title || !notificationData.message || !notificationData.type) {
+        res.status(400).json(createErrorResponse('Missing required fields: recipient_user_id, title, message, type'));
+        return;
+      }
+
+      const notification = await this.notificationService.createNotificationAsync(notificationData);
+
+      res.status(202).json(createSuccessResponse(
+        { 
+          notificationId: notification.id,
+          status: 'queued',
+          message: 'Notification queued for async processing'
+        }, 
+        'Notification queued successfully'
+      ));
+    } catch (error) {
+      logger.error('Error creating async notification:', error);
+      res.status(500).json(createErrorResponse('Failed to queue notification'));
+    }
+  };
+
+  // POST /api/notifications/queue/appointment-reminder
+  public queueAppointmentReminder = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        recipient_user_id,
+        patient_name,
+        doctor_name,
+        appointment_date,
+        appointment_time,
+        appointment_number,
+        room_number,
+        reason
+      } = req.body;
+
+      if (!recipient_user_id || !patient_name || !doctor_name || !appointment_date || !appointment_time) {
+        res.status(400).json(createErrorResponse('Missing required fields for appointment reminder'));
+        return;
+      }
+
+      await this.notificationService.queueAppointmentReminder({
+        recipient_user_id,
+        patient_name,
+        doctor_name,
+        appointment_date,
+        appointment_time,
+        appointment_number,
+        room_number,
+        reason
+      });
+
+      res.status(202).json(createSuccessResponse(
+        { 
+          status: 'queued',
+          message: 'Appointment reminder queued for processing'
+        }, 
+        'Appointment reminder queued successfully'
+      ));
+    } catch (error) {
+      logger.error('Error queuing appointment reminder:', error);
+      res.status(500).json(createErrorResponse('Failed to queue appointment reminder'));
+    }
+  };
+
+  // POST /api/notifications/queue/prescription-ready
+  public queuePrescriptionReady = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        recipient_user_id,
+        patient_name,
+        doctor_name,
+        prescription_number,
+        issued_date,
+        total_cost
+      } = req.body;
+
+      if (!recipient_user_id || !patient_name || !prescription_number) {
+        res.status(400).json(createErrorResponse('Missing required fields for prescription ready notification'));
+        return;
+      }
+
+      await this.notificationService.queuePrescriptionReady({
+        recipient_user_id,
+        patient_name,
+        doctor_name,
+        prescription_number,
+        issued_date,
+        total_cost
+      });
+
+      res.status(202).json(createSuccessResponse(
+        { 
+          status: 'queued',
+          message: 'Prescription ready notification queued for processing'
+        }, 
+        'Prescription ready notification queued successfully'
+      ));
+    } catch (error) {
+      logger.error('Error queuing prescription ready notification:', error);
+      res.status(500).json(createErrorResponse('Failed to queue prescription ready notification'));
+    }
+  };
+
+  // POST /api/notifications/queue/system-alert
+  public queueSystemAlert = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        recipient_user_id,
+        title,
+        message,
+        priority,
+        alert_type
+      } = req.body;
+
+      if (!title || !message || !priority || !alert_type) {
+        res.status(400).json(createErrorResponse('Missing required fields: title, message, priority, alert_type'));
+        return;
+      }
+
+      await this.notificationService.queueSystemAlert({
+        recipient_user_id,
+        title,
+        message,
+        priority,
+        alert_type
+      });
+
+      res.status(202).json(createSuccessResponse(
+        { 
+          status: 'queued',
+          message: 'System alert queued for processing'
+        }, 
+        'System alert queued successfully'
+      ));
+    } catch (error) {
+      logger.error('Error queuing system alert:', error);
+      res.status(500).json(createErrorResponse('Failed to queue system alert'));
+    }
+  };
+
+  // POST /api/notifications/queue/bulk
+  public queueBulkNotification = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        recipient_user_ids,
+        title,
+        message,
+        notification_type,
+        priority,
+        channels,
+        template_name,
+        template_variables
+      } = req.body;
+
+      if (!recipient_user_ids || !Array.isArray(recipient_user_ids) || recipient_user_ids.length === 0) {
+        res.status(400).json(createErrorResponse('recipient_user_ids must be a non-empty array'));
+        return;
+      }
+
+      if (!title || !message || !notification_type) {
+        res.status(400).json(createErrorResponse('Missing required fields: title, message, notification_type'));
+        return;
+      }
+
+      await this.notificationService.queueBulkNotification({
+        recipient_user_ids,
+        title,
+        message,
+        notification_type,
+        priority,
+        channels,
+        template_name,
+        template_variables
+      });
+
+      res.status(202).json(createSuccessResponse(
+        { 
+          status: 'queued',
+          recipientCount: recipient_user_ids.length,
+          message: 'Bulk notification queued for processing'
+        }, 
+        'Bulk notification queued successfully'
+      ));
+    } catch (error) {
+      logger.error('Error queuing bulk notification:', error);
+      res.status(500).json(createErrorResponse('Failed to queue bulk notification'));
+    }
+  };
 }

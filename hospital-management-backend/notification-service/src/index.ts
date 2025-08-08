@@ -9,6 +9,7 @@ import { logger } from '@hospital/shared';
 // Import configurations and services
 import { dbConnection } from './config/database';
 import { rabbitmqConnection } from './config/rabbitmq';
+import { MessageHandler } from './services/MessageHandler';
 
 // Import routes
 import notificationRoutes from './routes/notificationRoutes';
@@ -118,10 +119,40 @@ const startServer = async () => {
     await dbConnection.connect();
     await rabbitmqConnection.connect();
 
+    // Initialize message handler
+    const messageHandler = new MessageHandler();
+
     // Start consuming messages from RabbitMQ
     await rabbitmqConnection.consumeMessages(async (message) => {
-      logger.info('Received message from RabbitMQ:', message);
-      // TODO: Process the message (create notification, send via channels, etc.)
+      try {
+        logger.info('Received message from RabbitMQ:', {
+          messageId: message.id || 'unknown',
+          type: message.type || 'unknown',
+          timestamp: message.timestamp || new Date()
+        });
+
+        // Validate message structure
+        if (!messageHandler.validateMessage(message)) {
+          logger.error('Invalid message structure received', { message });
+          throw new Error('Invalid message structure');
+        }
+
+        // Process the message
+        await messageHandler.processMessage(message);
+
+        logger.info('Message processed successfully', {
+          messageId: message.id,
+          type: message.type
+        });
+
+      } catch (error) {
+        logger.error('Error processing RabbitMQ message:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          message: message,
+          stack: error instanceof Error ? error.stack : undefined
+        });
+        throw error; // Re-throw to trigger NACK
+      }
     });
 
     // Start HTTP server
@@ -129,7 +160,12 @@ const startServer = async () => {
       logger.info(`Notification Service started successfully`, {
         port: PORT,
         environment: process.env.NODE_ENV || 'development',
-        service: 'notification-service'
+        service: 'notification-service',
+        features: {
+          rabbitmq: 'enabled',
+          mongodb: 'enabled',
+          asyncProcessing: 'enabled'
+        }
       });
     });
 

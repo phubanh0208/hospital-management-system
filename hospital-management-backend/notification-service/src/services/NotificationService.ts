@@ -6,6 +6,8 @@ import { EmailService } from './EmailService';
 import { SMSService } from './SMSService';
 import { logger } from '@hospital/shared';
 import mongoose from 'mongoose';
+import { rabbitmqConnection } from '../config/rabbitmq';
+import { MessageRoutingKeys } from '../types/MessageTypes';
 
 export interface CreateNotificationData {
   recipient_user_id: string;
@@ -403,6 +405,224 @@ export class NotificationService {
       return result.deletedCount || 0;
     } catch (error) {
       logger.error('Error cleaning up expired notifications:', error);
+      throw error;
+    }
+  }
+
+  // ========== ASYNC PROCESSING METHODS ==========
+
+  /**
+   * Create notification and queue for async processing
+   * Returns immediately after saving to DB, actual sending happens via RabbitMQ
+   */
+  public async createNotificationAsync(data: CreateNotificationData): Promise<INotification> {
+    try {
+      // Get user preferences to determine channels
+      const userPreferences = await this.getUserPreferences(data.recipient_user_id);
+      const channels = data.channels || this.getDefaultChannels(data.type, userPreferences);
+
+      const notification = new Notification({
+        recipient_user_id: data.recipient_user_id,
+        recipient_type: data.recipient_type,
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        priority: data.priority || 'normal',
+        channels,
+        status: 'pending',
+        related_entity_type: data.related_entity_type,
+        related_entity_id: data.related_entity_id,
+        expires_at: data.expires_at,
+        created_at: new Date()
+      });
+
+      await notification.save();
+
+      logger.info('Notification created (async)', {
+        notificationId: notification.id,
+        recipientUserId: data.recipient_user_id,
+        type: data.type,
+        channels
+      });
+
+      // Queue for async processing
+      await this.queueNotificationForSending(
+        notification.id, 
+        data.template_name, 
+        data.template_variables
+      );
+
+      return notification;
+    } catch (error) {
+      logger.error('Error creating async notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Queue notification for async sending via RabbitMQ
+   */
+  public async queueNotificationForSending(
+    notificationId: string,
+    templateName?: string,
+    templateVariables?: Record<string, any>
+  ): Promise<void> {
+    try {
+      const message = {
+        id: `send-${notificationId}-${Date.now()}`,
+        type: 'send_notification',
+        timestamp: new Date(),
+        source_service: 'notification-service',
+        data: {
+          notification_id: notificationId,
+          template_name: templateName,
+          template_variables: templateVariables
+        }
+      };
+
+      await rabbitmqConnection.publishMessage(MessageRoutingKeys.SEND_NOTIFICATION, message);
+
+      logger.info('Notification queued for async sending', {
+        notificationId,
+        messageId: message.id
+      });
+    } catch (error) {
+      logger.error('Error queuing notification for sending:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Queue appointment reminder via RabbitMQ
+   */
+  public async queueAppointmentReminder(data: {
+    recipient_user_id: string;
+    patient_name: string;
+    doctor_name: string;
+    appointment_date: string;
+    appointment_time: string;
+    appointment_number?: string;
+    room_number?: string;
+    reason?: string;
+  }): Promise<void> {
+    try {
+      const message = {
+        id: `appointment-${data.recipient_user_id}-${Date.now()}`,
+        type: 'appointment_reminder',
+        timestamp: new Date(),
+        source_service: 'notification-service',
+        data
+      };
+
+      await rabbitmqConnection.publishMessage(MessageRoutingKeys.APPOINTMENT_REMINDER, message);
+
+      logger.info('Appointment reminder queued', {
+        recipientUserId: data.recipient_user_id,
+        appointmentDate: data.appointment_date,
+        messageId: message.id
+      });
+    } catch (error) {
+      logger.error('Error queuing appointment reminder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Queue prescription ready notification via RabbitMQ
+   */
+  public async queuePrescriptionReady(data: {
+    recipient_user_id: string;
+    patient_name: string;
+    doctor_name?: string;
+    prescription_number: string;
+    issued_date?: string;
+    total_cost?: string;
+  }): Promise<void> {
+    try {
+      const message = {
+        id: `prescription-${data.recipient_user_id}-${Date.now()}`,
+        type: 'prescription_ready',
+        timestamp: new Date(),
+        source_service: 'notification-service',
+        data
+      };
+
+      await rabbitmqConnection.publishMessage(MessageRoutingKeys.PRESCRIPTION_READY, message);
+
+      logger.info('Prescription ready notification queued', {
+        recipientUserId: data.recipient_user_id,
+        prescriptionNumber: data.prescription_number,
+        messageId: message.id
+      });
+    } catch (error) {
+      logger.error('Error queuing prescription ready notification:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Queue system alert via RabbitMQ
+   */
+  public async queueSystemAlert(data: {
+    recipient_user_id?: string;
+    title: string;
+    message: string;
+    priority: 'low' | 'normal' | 'high' | 'urgent';
+    alert_type: 'maintenance' | 'emergency' | 'update' | 'security';
+  }): Promise<void> {
+    try {
+      const message = {
+        id: `system-alert-${Date.now()}`,
+        type: 'system_alert',
+        timestamp: new Date(),
+        source_service: 'notification-service',
+        data
+      };
+
+      await rabbitmqConnection.publishMessage(MessageRoutingKeys.SYSTEM_ALERT, message);
+
+      logger.info('System alert queued', {
+        title: data.title,
+        priority: data.priority,
+        messageId: message.id
+      });
+    } catch (error) {
+      logger.error('Error queuing system alert:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Queue bulk notification via RabbitMQ
+   */
+  public async queueBulkNotification(data: {
+    recipient_user_ids: string[];
+    title: string;
+    message: string;
+    notification_type: 'appointment' | 'prescription' | 'system' | 'emergency' | 'reminder';
+    priority?: 'low' | 'normal' | 'high' | 'urgent';
+    channels?: ('web' | 'email' | 'sms' | 'push')[];
+    template_name?: string;
+    template_variables?: Record<string, any>;
+  }): Promise<void> {
+    try {
+      const message = {
+        id: `bulk-${Date.now()}`,
+        type: 'bulk_notification',
+        timestamp: new Date(),
+        source_service: 'notification-service',
+        data
+      };
+
+      await rabbitmqConnection.publishMessage(MessageRoutingKeys.BULK_NOTIFICATION, message);
+
+      logger.info('Bulk notification queued', {
+        recipientCount: data.recipient_user_ids.length,
+        title: data.title,
+        messageId: message.id
+      });
+    } catch (error) {
+      logger.error('Error queuing bulk notification:', error);
       throw error;
     }
   }
