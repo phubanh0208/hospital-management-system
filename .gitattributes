@@ -1,0 +1,164 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# TypeScript files
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# JavaScript files  
+*.js text eol=lf
+*.jsx text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Docker files
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# SQL files
+*.sql text eol=lf
+
+# TypeScript files
+*.ts text eol=lf
+*.tsx text eol=lf
+
+# JavaScript files  
+*.js text eol=lf
+*.jsx text eol=lf
+*.mjs text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# Configuration files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.conf text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# Docker files
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# SQL files
+*.sql text eol=lf
+
+# HTML/CSS files
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.sass text eol=lf
+*.less text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.tar.gz binary
+*.tgz binary
+*.pdf binary
+
+# Node.js specific
+package-lock.json -diff
+yarn.lock -diff
+pnpm-lock.yaml -diff
+
+# Logs should not be diffed
+*.log -diff
+
+# Source code
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.json text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+
+# Config files
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.config text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Docker files
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+
+# SQL files
+*.sql text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.ttf binary
+*.otf binary
+*.mp4 binary
+*.mp3 binary
+*.avi binary
+*.mov binary
+*.pdf binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.tar.gz binary
+*.tar.bz2 binary
+*.rar binary
+*.7z binary
+
+# Compiled output
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
+# IDE files
+*.code-workspace text eol=lf
+
+# Git files
+.gitignore text eol=lf
+.gitattributes text eol=lf
