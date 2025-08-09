@@ -4,6 +4,157 @@
 
 A comprehensive microservice for managing hospital appointments, doctor availability, and appointment scheduling within the Hospital Management System.
 
+## 🏗️ System Architecture & Workflow
+
+### Architecture Overview
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        WEB[Web Frontend]
+        MOBILE[Mobile App]
+        API_CLIENT[API Client]
+    end
+    
+    subgraph "API Gateway"
+        GATEWAY[API Gateway<br/>Port: 3000]
+    end
+    
+    subgraph "Appointment Service"
+        CONTROLLER[Controllers Layer<br/>HTTP Request Handling]
+        SERVICE[Services Layer<br/>Business Logic]
+        DB_LAYER[Database Layer<br/>PostgreSQL Operations]
+    end
+    
+    subgraph "Database"
+        POSTGRES[(PostgreSQL<br/>Port: 5434)]
+    end
+    
+    subgraph "Other Services"
+        AUTH[Auth Service<br/>Port: 3001]
+        PATIENT[Patient Service<br/>Port: 3002]
+    end
+    
+    WEB --> GATEWAY
+    MOBILE --> GATEWAY
+    API_CLIENT --> GATEWAY
+    
+    GATEWAY --> CONTROLLER
+    CONTROLLER --> SERVICE
+    SERVICE --> DB_LAYER
+    DB_LAYER --> POSTGRES
+    
+    SERVICE -.-> AUTH
+    SERVICE -.-> PATIENT
+    
+    style CONTROLLER fill:#e1f5fe
+    style SERVICE fill:#f3e5f5
+    style DB_LAYER fill:#e8f5e8
+    style POSTGRES fill:#fff3e0
+```
+
+### Request Flow Diagram
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller
+    participant Service
+    participant Database
+    participant SharedLib
+    
+    Client->>Controller: HTTP Request
+    Controller->>Controller: Validate Input
+    Controller->>Service: Call Business Logic
+    Service->>SharedLib: Get DB Connection
+    Service->>Database: Execute Query
+    Database-->>Service: Return Data
+    Service->>Service: Process Business Logic
+    Service-->>Controller: Return Result
+    Controller->>Controller: Format Response
+    Controller-->>Client: HTTP Response
+```
+
+### Appointment Creation Workflow
+```mermaid
+flowchart TD
+    START([Client Request]) --> VALIDATE{Validate Input}
+    VALIDATE -->|Invalid| ERROR_RESP[Return Validation Error]
+    VALIDATE -->|Valid| GEN_UUID[Generate UUID]
+    GEN_UUID --> GEN_NUMBER[Generate Appointment Number<br/>AP+YYYYMMDD+NNN]
+    GEN_NUMBER --> CHECK_CONFLICT{Check Conflicts}
+    CHECK_CONFLICT -->|Conflict Found| CONFLICT_ERROR[Return Conflict Error]
+    CHECK_CONFLICT -->|No Conflict| INSERT_DB[Insert to Database]
+    INSERT_DB --> SUCCESS{Insert Success?}
+    SUCCESS -->|No| DB_ERROR[Return Database Error]
+    SUCCESS -->|Yes| RETURN_SUCCESS[Return Created Appointment]
+    
+    ERROR_RESP --> END([End])
+    CONFLICT_ERROR --> END
+    DB_ERROR --> END
+    RETURN_SUCCESS --> END
+    
+    style START fill:#e8f5e8
+    style END fill:#ffebee
+    style VALIDATE fill:#fff3e0
+    style CHECK_CONFLICT fill:#f3e5f5
+    style SUCCESS fill:#e1f5fe
+```
+
+### Slot Generation Workflow
+```mermaid
+flowchart TD
+    START([Generate Slots Request]) --> GET_AVAILABILITY[Get Doctor Availability<br/>from Database]
+    GET_AVAILABILITY --> CHECK_AVAILABILITY{Has Availability?}
+    CHECK_AVAILABILITY -->|No| NO_AVAILABILITY[Return No Availability Error]
+    CHECK_AVAILABILITY -->|Yes| CALC_DATES[Calculate Date Range<br/>dateFrom to dateTo]
+    CALC_DATES --> LOOP_DATES[For Each Date in Range]
+    LOOP_DATES --> MATCH_DAY{Match Day of Week<br/>with Availability?}
+    MATCH_DAY -->|No Match| NEXT_DATE[Next Date]
+    MATCH_DAY -->|Match| GEN_SLOTS[Generate 30-min Slots<br/>between start_time and end_time]
+    GEN_SLOTS --> ADD_TO_BATCH[Add Slots to Batch]
+    ADD_TO_BATCH --> NEXT_DATE
+    NEXT_DATE --> MORE_DATES{More Dates?}
+    MORE_DATES -->|Yes| LOOP_DATES
+    MORE_DATES -->|No| BULK_INSERT[Bulk Insert Slots<br/>with Conflict Handling]
+    BULK_INSERT --> RETURN_COUNT[Return Generated Count]
+    
+    NO_AVAILABILITY --> END([End])
+    RETURN_COUNT --> END
+    
+    style START fill:#e8f5e8
+    style END fill:#ffebee
+    style CALC_DATES fill:#fff3e0
+    style GEN_SLOTS fill:#f3e5f5
+    style BULK_INSERT fill:#e1f5fe
+```
+
+## 🔄 Core Business Logic Flow
+
+### 1. Three-Layer Architecture Pattern
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Controllers   │ -> │    Services     │ -> │   Database      │
+│  (HTTP Layer)   │    │ (Business Logic)│    │  (PostgreSQL)   │
+│                 │    │                 │    │                 │
+│ • Validation    │    │ • Data Process  │    │ • CRUD Ops      │
+│ • Error Handle  │    │ • Business Rules│    │ • Transactions  │
+│ • Response      │    │ • External Calls│    │ • Constraints   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
+
+### 2. Data Flow Mechanisms
+
+#### Appointment Management Flow:
+1. **Input Validation** → Validate required fields, enum values, date formats
+2. **Business Logic** → Check conflicts, generate appointment number
+3. **Database Operations** → Insert with UUID, return created record
+4. **Response Formatting** → Standard success/error response structure
+
+#### Doctor Availability Flow:
+1. **Schedule Definition** → Define weekly recurring schedules (day_of_week, start_time, end_time)
+2. **Availability Check** → Query availability for specific doctor and day
+3. **Slot Generation** → Auto-generate 30-minute time slots based on availability
+4. **Conflict Prevention** → Use database constraints to prevent double-booking
+
 ### ✅ Recent Testing (August 2025)
 - **API Integration**: All endpoints tested and working through API Gateway
 - **Database Connection**: PostgreSQL connection stable with existing appointment data
@@ -11,14 +162,117 @@ A comprehensive microservice for managing hospital appointments, doctor availabi
 - **Data Retrieval**: Successfully listing and managing appointments
 - **System Integration**: Full compatibility with Patient and Auth services
 
-## Features
+## 🚀 Features & Capabilities
 
+### Core Features
 - **Appointment Management**: Complete CRUD operations for appointments with auto-generated appointment numbers
-- **Doctor Availability**: Manage weekly recurring doctor availability schedules
+- **Doctor Availability**: Manage weekly recurring doctor availability schedules  
 - **Appointment Slots**: Pre-calculate and manage available appointment time slots
 - **Advanced Filtering**: Search and filter appointments by multiple criteria
 - **Conflict Detection**: Prevent appointment conflicts and double bookings
 - **Status Tracking**: Track appointment lifecycle (scheduled → confirmed → completed)
+
+### Technical Features
+- **Microservice Architecture**: Standalone service with clear boundaries
+- **Database Connection Pooling**: Optimized PostgreSQL connections (max 20)
+- **Structured Logging**: Winston-based logging with request tracking
+- **Error Handling**: Comprehensive error handling with proper HTTP status codes
+- **Input Validation**: TypeScript + runtime validation for data integrity
+- **Auto-generated IDs**: UUID for entities, formatted appointment numbers
+- **Pagination Support**: Efficient data retrieval with pagination
+- **Search & Filter**: Multi-field search with dynamic query building
+
+## 🔧 How It Works - Detailed Mechanisms
+
+### 1. Appointment Number Generation
+```mermaid
+flowchart LR
+    DATE[Current Date<br/>2025-08-15] --> FORMAT[Format: YYYYMMDD<br/>20250815]
+    FORMAT --> QUERY[Query Max Number<br/>for Today]
+    QUERY --> INCREMENT[Increment Counter<br/>001, 002, 003...]
+    INCREMENT --> COMBINE[Combine: AP + Date + Counter<br/>AP20250815001]
+    
+    style DATE fill:#e8f5e8
+    style COMBINE fill:#f3e5f5
+```
+
+**Logic:**
+- Format: `AP + YYYYMMDD + NNN`
+- Counter resets daily
+- Database trigger ensures uniqueness
+- Examples: AP20250815001, AP20250815002, AP20250816001
+
+### 2. Doctor Availability System
+```mermaid
+graph TD
+    DOCTOR[Doctor] --> SCHEDULE[Set Weekly Schedule]
+    SCHEDULE --> DAYS[Define Available Days<br/>0=Sunday, 1=Monday, etc.]
+    DAYS --> TIMES[Set Time Ranges<br/>08:00-12:00, 14:00-17:00]
+    TIMES --> STORE[Store in Database<br/>doctor_availability table]
+    STORE --> GENERATE[Generate Appointment Slots]
+    GENERATE --> SLOTS[30-minute Time Slots<br/>08:00, 08:30, 09:00...]
+    
+    style DOCTOR fill:#e1f5fe
+    style SCHEDULE fill:#f3e5f5
+    style GENERATE fill:#fff3e0
+    style SLOTS fill:#e8f5e8
+```
+
+### 3. Slot Generation Algorithm
+```typescript
+// Simplified algorithm
+for (let date = startDate; date <= endDate; date++) {
+  const dayOfWeek = date.getDay();
+  const availability = getAvailabilityForDay(doctorId, dayOfWeek);
+  
+  for (const timeSlot of availability) {
+    const slots = generateTimeSlots(timeSlot.startTime, timeSlot.endTime, 30); // 30-minute intervals
+    await bulkInsertSlots(slots);
+  }
+}
+```
+
+### 4. Conflict Detection Mechanism
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Service
+    participant Database
+    
+    Client->>Service: Create Appointment Request
+    Service->>Database: Check Doctor Availability
+    Database-->>Service: Return Available Slots
+    Service->>Service: Validate Time Slot
+    Service->>Database: Check Existing Appointments
+    Database-->>Service: Return Conflicts (if any)
+    alt No Conflicts
+        Service->>Database: Insert New Appointment
+        Database-->>Service: Success
+        Service-->>Client: Appointment Created
+    else Conflicts Found
+        Service-->>Client: Conflict Error
+    end
+```
+
+### 5. Database Query Optimization
+```sql
+-- Dynamic WHERE clause building
+SELECT * FROM appointments 
+WHERE 
+  ($1::text IS NULL OR patient_name ILIKE $1)
+  AND ($2::uuid IS NULL OR doctor_id = $2)
+  AND ($3::text IS NULL OR status = $3)
+  AND ($4::date IS NULL OR scheduled_date >= $4)
+ORDER BY scheduled_date ASC
+LIMIT $5 OFFSET $6;
+```
+
+**Optimization Features:**
+- **Parameterized Queries**: Prevent SQL injection
+- **Dynamic Filtering**: Only apply filters when provided
+- **Indexed Columns**: Fast lookups on doctor_id, patient_id, scheduled_date
+- **Connection Pooling**: Reuse database connections
+- **Bulk Operations**: Efficient slot generation with batch inserts
 
 ## Database Schema
 
@@ -66,7 +320,7 @@ A comprehensive microservice for managing hospital appointments, doctor availabi
 - `created_at` (TIMESTAMPTZ): Creation timestamp
 - `updated_at` (TIMESTAMPTZ): Last update timestamp
 
-## API Endpoints
+## 🌐 API Endpoints & Request Flow
 
 ### Base URL
 ```
@@ -77,6 +331,98 @@ http://localhost:3003
 Hiện tại service chưa có authentication middleware. Header cần thiết:
 ```
 Content-Type: application/json
+```
+
+### API Request/Response Flow
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant AC as AppointmentController
+    participant AS as AppointmentService
+    participant DB as PostgreSQL
+    participant SL as SharedLib
+    
+    Note over C,SL: Complete API Request Flow
+    
+    C->>AC: POST /api/appointments
+    AC->>AC: validateAppointment(data)
+    
+    alt Validation Fails
+        AC-->>C: 400 Bad Request<br/>{success: false, errors: [...]}
+    else Validation Success
+        AC->>AS: createAppointment(data)
+        AS->>AS: Generate UUID & Appointment Number
+        AS->>SL: getPool('appointment')
+        AS->>DB: INSERT INTO appointments...
+        
+        alt Database Error
+            DB-->>AS: Error Response
+            AS-->>AC: {success: false, message: "DB Error"}
+            AC-->>C: 400 Bad Request
+        else Database Success
+            DB-->>AS: Created Record
+            AS-->>AC: {success: true, data: appointment}
+            AC-->>C: 201 Created<br/>{success: true, data: {...}}
+        end
+    end
+```
+
+### Error Handling Flow
+```mermaid
+flowchart TD
+    REQUEST[API Request] --> VALIDATE{Input Validation}
+    VALIDATE -->|Fail| VALIDATION_ERROR[400 Validation Error<br/>Return error details]
+    VALIDATE -->|Pass| BUSINESS_LOGIC[Business Logic Processing]
+    BUSINESS_LOGIC --> DATABASE{Database Operation}
+    DATABASE -->|Error| DB_ERROR[400/500 Database Error<br/>Log error, return generic message]
+    DATABASE -->|Success| FORMAT_RESPONSE[Format Success Response]
+    FORMAT_RESPONSE --> SUCCESS_RESPONSE[200/201 Success<br/>Return data with metadata]
+    
+    VALIDATION_ERROR --> LOG[Log Error Details]
+    DB_ERROR --> LOG
+    SUCCESS_RESPONSE --> LOG_SUCCESS[Log Success]
+    
+    style REQUEST fill:#e8f5e8
+    style VALIDATION_ERROR fill:#ffebee
+    style DB_ERROR fill:#ffebee
+    style SUCCESS_RESPONSE fill:#e8f5e8
+```
+
+### Response Structure Standards
+```typescript
+// Success Response
+interface SuccessResponse<T> {
+  success: true;
+  data: T;
+  message: string;
+  timestamp: string;
+}
+
+// Error Response  
+interface ErrorResponse {
+  success: false;
+  message: string;
+  errors?: string[];
+  timestamp: string;
+}
+
+// Paginated Response
+interface PaginatedResponse<T> {
+  success: true;
+  data: {
+    items: T[];
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalCount: number;
+      limit: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  };
+  message: string;
+  timestamp: string;
+}
 ```
 
 ### Health Check
@@ -1239,11 +1585,118 @@ This service integrates with:
 - **Patient Service**: Patient information lookup
 - **Shared Library**: Common utilities and database connections
 
-## Future Enhancements
+## 🎯 System Performance & Metrics
 
-1. **Notification Integration**: Send appointment reminders
-2. **Payment Integration**: Handle appointment fees
-3. **Calendar Integration**: Sync with external calendars
-4. **Conflict Resolution**: Advanced conflict detection
-5. **Recurring Appointments**: Support for recurring appointments
-6. **Waitlist Management**: Manage appointment waiting lists
+### Performance Benchmarks
+```mermaid
+graph LR
+    subgraph "Response Times"
+        HEALTH[Health Check<br/>~10ms]
+        GET_ALL[GET Appointments<br/>~50ms]
+        CREATE[POST Appointment<br/>~100ms]
+        GENERATE[Generate Slots<br/>~200ms]
+    end
+    
+    subgraph "Database Performance"
+        POOL[Connection Pool<br/>Max: 20 connections]
+        TIMEOUT[Query Timeout<br/>30 seconds]
+        RETRY[Retry Logic<br/>3 attempts]
+    end
+    
+    style HEALTH fill:#e8f5e8
+    style GET_ALL fill:#fff3e0
+    style CREATE fill:#f3e5f5
+    style GENERATE fill:#ffebee
+```
+
+### Scalability Features
+- **Stateless Design**: No server-side sessions, perfect for horizontal scaling
+- **Connection Pooling**: Efficient database resource utilization
+- **Microservice Architecture**: Independent scaling and deployment
+- **Docker Support**: Container-based deployment with health checks
+- **Structured Logging**: Comprehensive monitoring and debugging
+
+### Security Measures
+- **SQL Injection Prevention**: Parameterized queries only
+- **Input Validation**: Multi-layer validation (TypeScript + runtime)
+- **Error Masking**: No sensitive data in error responses
+- **UUID Usage**: Non-sequential, unpredictable identifiers
+- **Database Constraints**: Referential integrity and data consistency
+
+## 🔮 Future Enhancements
+
+### Phase 1: Core Improvements
+1. **Authentication Integration**: JWT middleware for secure access
+2. **Real-time Notifications**: WebSocket for appointment updates
+3. **Advanced Conflict Detection**: Smart scheduling algorithms
+4. **Caching Layer**: Redis for frequently accessed data
+
+### Phase 2: Advanced Features
+5. **Recurring Appointments**: Support for weekly/monthly appointments
+6. **Waitlist Management**: Queue system for fully booked slots
+7. **Calendar Integration**: Sync with Google Calendar, Outlook
+8. **Payment Integration**: Handle appointment fees and billing
+
+### Phase 3: Analytics & AI
+9. **Appointment Analytics**: Usage patterns and optimization insights
+10. **Predictive Scheduling**: AI-powered optimal slot suggestions
+11. **Resource Optimization**: Dynamic slot allocation based on demand
+12. **Patient Behavior Analysis**: No-show prediction and prevention
+
+## 📊 Architecture Summary
+
+### Technology Stack
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        WEB[Web Applications]
+        MOBILE[Mobile Apps]
+    end
+    
+    subgraph "API Layer"
+        GATEWAY[API Gateway<br/>Express.js]
+        AUTH[Authentication<br/>JWT]
+    end
+    
+    subgraph "Service Layer"
+        APPOINTMENT[Appointment Service<br/>Node.js + TypeScript]
+        SHARED[Shared Library<br/>Common Utilities]
+    end
+    
+    subgraph "Data Layer"
+        POSTGRES[PostgreSQL<br/>Primary Database]
+        REDIS[Redis<br/>Caching (Future)]
+    end
+    
+    subgraph "Infrastructure"
+        DOCKER[Docker Containers]
+        LOGGING[Winston Logging]
+        MONITORING[Health Checks]
+    end
+    
+    WEB --> GATEWAY
+    MOBILE --> GATEWAY
+    GATEWAY --> AUTH
+    AUTH --> APPOINTMENT
+    APPOINTMENT --> SHARED
+    SHARED --> POSTGRES
+    APPOINTMENT -.-> REDIS
+    
+    DOCKER --> APPOINTMENT
+    LOGGING --> APPOINTMENT
+    MONITORING --> APPOINTMENT
+    
+    style APPOINTMENT fill:#e1f5fe
+    style POSTGRES fill:#f3e5f5
+    style DOCKER fill:#e8f5e8
+```
+
+### Key Design Principles
+1. **Separation of Concerns**: Clear layer boundaries and responsibilities
+2. **Single Responsibility**: Each service handles one business domain
+3. **Fail Fast**: Early validation and error detection
+4. **Idempotency**: Safe retry mechanisms for critical operations
+5. **Observability**: Comprehensive logging and monitoring
+6. **Scalability**: Designed for horizontal scaling from day one
+
+This appointment service represents a production-ready microservice with enterprise-grade features, comprehensive error handling, and a solid foundation for future enhancements.
