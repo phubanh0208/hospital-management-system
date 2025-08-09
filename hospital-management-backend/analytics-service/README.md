@@ -15,6 +15,218 @@ Hospital Management System Analytics and Reporting Service built with Node.js, T
 
 The Analytics Service provides comprehensive reporting and statistics for the hospital management system, including patient analytics, prescription reports, appointment statistics, doctor performance metrics, and system monitoring.
 
+## 🔄 System Workflow
+
+### High-Level Architecture Flow
+
+```mermaid
+graph TB
+    subgraph "External Services"
+        A[Patient Service :3002]
+        B[Appointment Service :3003]
+        C[Prescription Service :3004]
+        D[Auth Service :3001]
+        E[Notification Service :3005]
+    end
+    
+    subgraph "Analytics Service :3006"
+        F[Express Server]
+        G[Analytics Controller]
+        H[Analytics Service]
+        I[Database Pool]
+    end
+    
+    subgraph "TimescaleDB"
+        J[patient_metrics]
+        K[appointment_metrics]
+        L[prescription_metrics]
+        M[system_metrics]
+        N[Materialized Views]
+    end
+    
+    subgraph "Client Applications"
+        O[Frontend Dashboard]
+        P[Mobile App]
+        Q[Admin Panel]
+    end
+    
+    A --> J
+    B --> K
+    C --> L
+    D --> F
+    E --> M
+    
+    O --> F
+    P --> F
+    Q --> F
+    
+    F --> G
+    G --> H
+    H --> I
+    I --> J
+    I --> K
+    I --> L
+    I --> M
+    I --> N
+```
+
+### Request Processing Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Express
+    participant Controller
+    participant Service
+    participant Database
+    participant TimescaleDB
+    
+    Client->>Express: GET /api/analytics/dashboard
+    Express->>Controller: Route to AnalyticsController
+    Controller->>Service: Call getDashboardSummary()
+    
+    Service->>Database: Query patient_metrics
+    Database->>TimescaleDB: SELECT COUNT(DISTINCT patient_id)...
+    TimescaleDB-->>Database: Results
+    Database-->>Service: Patient count
+    
+    Service->>Database: Query appointment_metrics
+    Database->>TimescaleDB: SELECT COUNT(*)...
+    TimescaleDB-->>Database: Results
+    Database-->>Service: Appointment count
+    
+    Service->>Database: Query prescription_metrics
+    Database->>TimescaleDB: SELECT COUNT(*)...
+    TimescaleDB-->>Database: Results
+    Database-->>Service: Prescription count
+    
+    Service->>Database: Query revenue data
+    Database->>TimescaleDB: SELECT SUM(fee_amount)...
+    TimescaleDB-->>Database: Results
+    Database-->>Service: Revenue total
+    
+    Service-->>Controller: Aggregated summary
+    Controller-->>Express: JSON response
+    Express-->>Client: Dashboard data
+```
+
+### Data Flow Architecture
+
+```mermaid
+flowchart LR
+    subgraph "Data Sources"
+        A[Patient Events]
+        B[Appointment Events]
+        C[Prescription Events]
+        D[System Events]
+    end
+    
+    subgraph "TimescaleDB Tables"
+        E[patient_metrics]
+        F[appointment_metrics]
+        G[prescription_metrics]
+        H[system_metrics]
+    end
+    
+    subgraph "Processing Layer"
+        I[Materialized Views]
+        J[Aggregation Functions]
+        K[Time-based Partitions]
+    end
+    
+    subgraph "API Endpoints"
+        L[/patients/monthly]
+        M[/appointments/stats]
+        N[/prescriptions/reports]
+        O[/dashboard]
+        P[/doctors/performance]
+    end
+    
+    A --> E
+    B --> F
+    C --> G
+    D --> H
+    
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    
+    I --> J
+    J --> K
+    
+    K --> L
+    K --> M
+    K --> N
+    K --> O
+    K --> P
+```
+
+### API Request Lifecycle
+
+```mermaid
+flowchart TD
+    A[Client Request] --> B{Authentication Check}
+    B -->|Valid| C[Route Matching]
+    B -->|Invalid| D[401 Unauthorized]
+    
+    C --> E[Controller Method]
+    E --> F[Input Validation]
+    F -->|Valid| G[Service Layer]
+    F -->|Invalid| H[400 Bad Request]
+    
+    G --> I[Database Connection Pool]
+    I --> J{Database Query}
+    J -->|Success| K[Data Processing]
+    J -->|Error| L[500 Internal Error]
+    
+    K --> M[Response Formatting]
+    M --> N[JSON Response]
+    N --> O[Client Receives Data]
+    
+    D --> P[Error Response]
+    H --> P
+    L --> P
+    P --> Q[Client Handles Error]
+```
+
+### Service Integration Pattern
+
+```mermaid
+graph LR
+    subgraph "Hospital Management Ecosystem"
+        A[API Gateway :3000] 
+        B[Frontend :3000]
+        
+        subgraph "Microservices"
+            C[Auth Service :3001]
+            D[Patient Service :3002]
+            E[Appointment Service :3003]
+            F[Prescription Service :3004]
+            G[Notification Service :3005]
+            H[Analytics Service :3006]
+        end
+        
+        subgraph "Data Layer"
+            I[TimescaleDB]
+            J[PostgreSQL]
+            K[Redis Cache]
+        end
+    end
+    
+    B --> A
+    A --> H
+    
+    D --> I
+    E --> I
+    F --> I
+    C --> J
+    G --> K
+    
+    H --> I
+    H --> C
+```
+
 ## 🏗️ Architecture
 
 ```
@@ -211,6 +423,99 @@ CORS_ORIGIN=http://localhost:3000
 
 ## 🗄️ Database Schema
 
+### Database Workflow
+
+```mermaid
+graph TB
+    subgraph "Data Ingestion"
+        A[Patient Registration Event]
+        B[Appointment Booking Event]
+        C[Prescription Creation Event]
+        D[System Performance Event]
+    end
+    
+    subgraph "TimescaleDB Processing"
+        E[patient_metrics Table]
+        F[appointment_metrics Table]
+        G[prescription_metrics Table]
+        H[system_metrics Table]
+        
+        I[Hypertable Partitioning]
+        J[Time-based Chunks]
+        K[Automatic Compression]
+    end
+    
+    subgraph "Analytics Processing"
+        L[daily_patient_summary View]
+        M[doctor_daily_performance View]
+        N[monthly_revenue_summary View]
+        O[system_health_metrics View]
+    end
+    
+    subgraph "API Responses"
+        P[Dashboard Summary]
+        Q[Monthly Reports]
+        R[Performance Metrics]
+        S[System Status]
+    end
+    
+    A --> E
+    B --> F
+    C --> G
+    D --> H
+    
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+    
+    I --> J
+    J --> K
+    
+    E --> L
+    F --> M
+    F --> N
+    H --> O
+    
+    L --> P
+    L --> Q
+    M --> R
+    O --> S
+```
+
+### Data Retention & Lifecycle
+
+```mermaid
+timeline
+    title Data Lifecycle Management
+    
+    section Real-time
+        Data Ingestion    : Patient events
+                         : Appointment events
+                         : Prescription events
+                         : System metrics
+    
+    section Hourly
+        Aggregation      : Materialized view refresh
+                        : Performance calculations
+                        : Summary statistics
+    
+    section Daily
+        Compression      : Chunk compression
+                        : Index optimization
+                        : Query performance tuning
+    
+    section Monthly
+        Archival         : Historical data archival
+                        : Report generation
+                        : Trend analysis
+    
+    section Yearly
+        Cleanup          : Data retention policies
+                        : Old data purging
+                        : Storage optimization
+```
+
 ### TimescaleDB Tables
 
 #### Patient Metrics
@@ -363,6 +668,76 @@ npm run clean       # Clean build artifacts
 4. Build and deploy with `npm run build && npm start`
 
 ## 🐳 Docker
+
+### Deployment Workflow
+
+```mermaid
+flowchart TD
+    subgraph "Development"
+        A[Code Changes] --> B[npm run dev]
+        B --> C[Hot Reload]
+        C --> D[Manual Testing]
+    end
+    
+    subgraph "Build Process"
+        D --> E[npm run build]
+        E --> F[TypeScript Compilation]
+        F --> G[dist/ Output]
+    end
+    
+    subgraph "Docker Deployment"
+        G --> H[Docker Build]
+        H --> I[Container Image]
+        I --> J[Docker Compose]
+    end
+    
+    subgraph "Production Environment"
+        J --> K[TimescaleDB Container]
+        J --> L[Analytics Service Container]
+        K --> M[Data Persistence]
+        L --> N[Service Ready]
+    end
+    
+    subgraph "Monitoring"
+        N --> O[Health Checks]
+        O --> P[Logging]
+        P --> Q[Performance Metrics]
+    end
+```
+
+### Container Architecture
+
+```mermaid
+graph TB
+    subgraph "Docker Network: hospital-network"
+        subgraph "Analytics Service Container"
+            A[Node.js App :3006]
+            B[Express Server]
+            C[Connection Pool]
+        end
+        
+        subgraph "TimescaleDB Container"
+            D[PostgreSQL + TimescaleDB]
+            E[Data Volume]
+            F[Port :5436]
+        end
+        
+        subgraph "Shared Services"
+            G[API Gateway :3000]
+            H[Redis Cache]
+            I[Log Aggregator]
+        end
+    end
+    
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    
+    G --> A
+    A --> H
+    A --> I
+```
 
 ### Using Docker Compose
 ```bash
