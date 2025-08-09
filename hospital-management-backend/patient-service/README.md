@@ -1,8 +1,27 @@
-# Patient Service
+# Hospital Management System - Patient Service
 
-**Status**: ✅ FULLY OPERATIONAL - Phone Validation & Authentication Working
+**Status**: ✅ FULLY OPERATIONAL - Production Ready
 
-The Patient Service is a core microservice of the Hospital Management System responsible for managing patient information, medical history, and visit summaries.
+The Patient Service is a core microservice of the Hospital Management System, built with TypeScript/Node.js and PostgreSQL. This service is part of a comprehensive microservices architecture designed for modern healthcare management.
+
+## 🏗️ System Architecture Overview
+
+This Patient Service is part of a larger **Hospital Management System** with the following microservices:
+
+- **API Gateway** (Port 3000) - Single entry point with authentication & routing
+- **Auth Service** (Port 3001) - User authentication & authorization
+- **Patient Service** (Port 3002) - **THIS SERVICE** - Patient information management
+- **Appointment Service** (Port 3003) - Appointment scheduling & management
+- **Prescription Service** (Port 3004) - Prescription & medication management
+- **Notification Service** (Port 3005) - Email/SMS/WebSocket notifications
+- **Analytics Service** (Port 3006) - Reports & data analytics
+
+### Technology Stack
+- **Backend**: TypeScript, Node.js, Express.js
+- **Database**: PostgreSQL 15+ with JSONB support
+- **Architecture**: Microservices with Docker containerization
+- **Shared Package**: `@hospital/shared` for common types & utilities
+- **Authentication**: JWT tokens with role-based access control
 
 ### ✅ Recent Fixes (August 2025)
 - **Phone Number Validation**: Fixed to comply with Vietnamese phone number format regex
@@ -67,6 +86,73 @@ curl http://localhost:3002/health
 - **JSONB Storage** - Flexible address and emergency contact storage
 - **Comprehensive Validation** - Input validation with detailed error messages
 - **Audit Trail** - Created/updated timestamps with user tracking
+
+## 🔄 Service Integration Flow
+
+### Patient Creation Flow
+```
+Client → API Gateway → Auth Validation → Patient Service → PostgreSQL → Response
+```
+
+### Inter-Service Communication
+- **Auth Service**: Provides user authentication & user ID for audit trails
+- **Appointment Service**: Uses Patient ID for appointment booking
+- **Prescription Service**: Uses Patient ID for prescription management
+- **Notification Service**: Sends patient-related notifications
+
+## 📊 Data Models & Types
+
+### Core Patient Interface
+```typescript
+interface Patient {
+  id: string;                    // UUID
+  patientCode: string;           // Auto-generated: BN20250807001
+  fullName: string;              // Vietnamese character support
+  dateOfBirth: Date;
+  gender: 'male' | 'female' | 'other';
+  phone: string;                 // Vietnamese format validation
+  email?: string;
+  address: Address;              // JSONB storage
+  bloodType?: BloodType;         // A+, A-, B+, B-, AB+, AB-, O+, O-
+  allergies?: string;
+  medicalHistory?: string;
+  emergencyContact: EmergencyContact;  // JSONB storage
+  insuranceInfo?: InsuranceInfo;       // JSONB storage
+  createdByUserId: string;       // From Auth Service
+  hospitalId?: string;
+  isActive: boolean;             // Soft delete support
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### Supporting Interfaces
+```typescript
+interface Address {
+  street: string;
+  ward: string;
+  district: string;
+  city: string;
+  zipCode?: string;
+}
+
+interface EmergencyContact {
+  name: string;
+  phone: string;
+  relationship: string;
+  address?: string;
+}
+
+interface PatientMedicalHistory {
+  id: string;
+  patientId: string;
+  conditionName: string;
+  diagnosedDate?: Date;
+  status: 'active' | 'resolved' | 'chronic';
+  notes?: string;
+  createdAt: Date;
+}
+```
 
 ## 🔗 API Endpoints
 
@@ -252,54 +338,101 @@ curl "http://localhost:3002/api/patients/uuid/visit-summary"
 ## 🗄️ Database Schema
 
 ### Main Tables
-- **patients** - Core patient information
-- **patient_medical_history** - Medical condition records
-- **patient_visit_summary** - Aggregated visit statistics
-- **patient_documents** - Document attachments (future use)
+- **patients** - Core patient information with JSONB fields
+- **patient_medical_history** - Medical condition records with status tracking
+- **patient_visit_summary** - Aggregated visit statistics (updated by other services)
+- **patient_documents** - Document attachments (future implementation)
 
-### Key Features
-- **Auto Patient Code Generation** - Trigger function generates codes like BN20250807001
-- **JSONB Fields** - Flexible storage for address, emergency contact, insurance
-- **Foreign Key Constraints** - Data integrity with other services
+### Database Features
+- **Auto Patient Code Generation** - PostgreSQL trigger generates codes like BN20250807001
+- **JSONB Storage** - Flexible storage for address, emergency contact, insurance info
+- **Soft Delete Pattern** - `is_active` flag maintains data integrity
 - **Optimized Indexes** - Performance optimization for search operations
+- **Foreign Key Constraints** - Data integrity with other microservices
+- **UTF-8 Support** - Full Vietnamese character support
 
 ### Patient Code Format
-- **BN** + **YYYYMMDD** + **NNN**
-- BN: Patient prefix
-- YYYYMMDD: Date of registration
-- NNN: Sequential number (001, 002, 003...)
-- Example: BN20250807001 (1st patient on Aug 7, 2025)
+- **Format**: BN + YYYYMMDD + NNN
+- **BN**: Patient prefix (Bệnh Nhân)
+- **YYYYMMDD**: Date of registration
+- **NNN**: Sequential number (001, 002, 003...)
+- **Example**: BN20250807001 (1st patient registered on Aug 7, 2025)
+
+### Key Database Optimizations
+```sql
+-- Indexes for performance
+CREATE INDEX idx_patients_patient_code ON patients(patient_code);
+CREATE INDEX idx_patients_phone ON patients(phone);
+CREATE INDEX idx_patients_full_name ON patients(full_name);
+CREATE INDEX idx_patients_active ON patients(is_active);
+
+-- JSONB indexes for flexible queries
+CREATE INDEX idx_patients_address ON patients USING GIN(address);
+CREATE INDEX idx_patients_emergency_contact ON patients USING GIN(emergency_contact);
+```
 
 ## 🔧 Configuration
 
 ### Environment Variables
 ```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5433/patient_service_db
-
-# Server
-PORT=3002
+# Server Configuration
 NODE_ENV=development
+PORT=3002
 
-# Service Discovery
-AUTH_SERVICE_URL=http://localhost:3001
-APPOINTMENT_SERVICE_URL=http://localhost:3003
+# Database Configuration
+PATIENT_DB_HOST=hospital-patient-db
+PATIENT_DB_PORT=5432
+PATIENT_DB_NAME=patient_service_db
+PATIENT_DB_USER=patient_user
+PATIENT_DB_PASSWORD=patient_password_123
+
+# Service Discovery (for inter-service communication)
+AUTH_SERVICE_URL=http://auth-service:3001
+APPOINTMENT_SERVICE_URL=http://appointment-service:3003
+PRESCRIPTION_SERVICE_URL=http://prescription-service:3004
+
+# Application Settings
+LOG_LEVEL=info
+UPLOAD_PATH=./uploads
+MAX_FILE_SIZE=10485760
+ALLOWED_FILE_TYPES=pdf,jpg,jpeg,png,doc,docx
 ```
 
 ### Docker Configuration
-The service runs with PostgreSQL in Docker:
+Multi-stage Dockerfile with production optimizations:
+```dockerfile
+# Build stage
+FROM node:18-alpine AS builder
+WORKDIR /app
+# Build shared package first, then patient service
+RUN npm run build
+
+# Production stage  
+FROM node:18-alpine AS production
+# Copy built files, install production deps only
+# Create non-root user for security
+USER patient
+EXPOSE 3002
+HEALTHCHECK --interval=30s --timeout=10s CMD curl -f http://localhost:3002/health
+CMD ["node", "dist/index.js"]
+```
+
+### Docker Compose Integration
 ```yaml
-# From docker-compose.yml
-hospital-patient-db:
-  image: postgres:15-alpine
-  environment:
-    POSTGRES_DB: patient_service_db
-    POSTGRES_USER: patient_user
-    POSTGRES_PASSWORD: patient_password
+# From hospital-management-backend/docker-compose.yml
+patient-service:
+  build:
+    context: .
+    dockerfile: patient-service/Dockerfile
+  container_name: hospital-patient-service
   ports:
-    - "5433:5432"
-  volumes:
-    - ./database/init/patient-init.sql:/docker-entrypoint-initdb.d/patient-init.sql
+    - "3002:3002"
+  networks:
+    - hospital-network
+  depends_on:
+    - hospital-patient-db
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
 ```
 
 ## 🧪 Testing Results
@@ -387,61 +520,149 @@ Uses `@hospital/shared` package for:
 - Search: ~20ms (with ILIKE operations)
 - Pagination: ~18ms (with COUNT queries)
 
-## 🔒 Security
+## 🔒 Security & Validation
 
 ### Input Validation
-- Comprehensive validation using shared validation functions
-- SQL injection prevention with parameterized queries
-- XSS protection with proper encoding
-- Date validation (no future birth dates)
-- Phone/email format validation
+- **Comprehensive Validation**: Using `@hospital/shared` validation functions
+- **SQL Injection Prevention**: Parameterized queries with PostgreSQL
+- **XSS Protection**: Proper input encoding and sanitization
+- **Business Logic Validation**:
+  - Date validation (no future birth dates)
+  - Vietnamese phone number format validation
+  - Email format validation
+  - Required field validation with detailed error messages
 
-### Authentication (Future)
-- JWT token authentication (currently disabled for testing)
-- Role-based access control planned
-- User ID tracking for audit trails
+### Authentication & Authorization
+- **JWT Token Authentication**: Integrated with Auth Service
+- **Role-Based Access Control**: Support for ADMIN, DOCTOR, NURSE, STAFF roles
+- **User Context Tracking**: `createdByUserId` for audit trails
+- **API Gateway Integration**: All requests authenticated through gateway
+- **Header-Based Auth**: Supports `x-user-id` header for service-to-service calls
 
-## 🚀 Deployment
+### Security Best Practices
+- **Non-root Docker user**: Container runs as `patient` user (UID 1001)
+- **Environment variable security**: Sensitive data in environment variables
+- **CORS configuration**: Proper origin restrictions
+- **Rate limiting**: Implemented at API Gateway level
+- **Health check endpoints**: No sensitive data exposure
 
-### Production Checklist
-- [ ] Enable authentication middleware
-- [ ] Configure production database
-- [ ] Set up monitoring and logging
-- [ ] Configure load balancing
-- [ ] Set up backup strategies
-- [ ] Security hardening
+## 🚀 Deployment & Operations
 
-### Docker Deployment
+### Quick Start Commands
 ```bash
-# Build and run
-docker-compose up patient-service -d
+# Clone the repository
+git clone <repository-url>
+cd hospital-management-backend
 
-# Check logs
-docker logs patient-service
+# Start all services with Docker Compose
+docker-compose up -d
 
-# Health check
+# Start only Patient Service and its dependencies
+docker-compose up patient-service hospital-patient-db -d
+
+# Check service health
 curl http://localhost:3002/health
+
+# View logs
+docker logs hospital-patient-service -f
 ```
 
-## 📝 Development Notes
+### Production Deployment Checklist
+- [x] **Authentication**: JWT token validation enabled
+- [x] **Database**: PostgreSQL with optimized indexes
+- [x] **Logging**: Comprehensive logging with @hospital/shared
+- [x] **Health Checks**: Docker health checks configured
+- [x] **Security**: Non-root user, input validation
+- [ ] **Monitoring**: Set up application monitoring (Prometheus/Grafana)
+- [ ] **Load Balancing**: Configure load balancer for high availability
+- [ ] **Backup Strategy**: Database backup and recovery procedures
+- [ ] **SSL/TLS**: HTTPS configuration for production
+- [ ] **Environment Secrets**: Secure secret management
 
-### Code Quality
-- TypeScript with strict type checking
-- Consistent error handling patterns
-- Comprehensive logging with @hospital/shared
-- Clean architecture with service/controller separation
+### Scaling Considerations
+- **Horizontal Scaling**: Stateless design allows multiple instances
+- **Database Connection Pooling**: Configured for optimal performance
+- **Caching Strategy**: Consider Redis for frequently accessed patient data
+- **Load Testing**: Verify performance under expected load
 
-### Future Enhancements
-- Document upload/management
-- Advanced search with filters
-- Patient photo support
-- Integration with medical devices
-- Mobile app API optimization
-- Real-time notifications
+## 📝 Development & Architecture Notes
+
+### Code Quality Standards
+- **TypeScript**: Strict type checking with comprehensive interfaces
+- **Clean Architecture**: Service/Controller/Route separation
+- **Error Handling**: Consistent error response patterns
+- **Logging**: Structured logging with @hospital/shared
+- **Testing**: Comprehensive endpoint testing completed
+- **Documentation**: Detailed API documentation with examples
+
+### Project Structure
+```
+patient-service/
+├── src/
+│   ├── controllers/PatientController.ts    # HTTP request handling
+│   ├── services/PatientService.ts          # Business logic & database operations
+│   ├── routes/patients.ts                  # Route definitions
+│   ├── middleware/                         # Custom middleware (future)
+│   └── index.ts                           # Express server setup
+├── dist/                                  # Compiled JavaScript output
+├── Dockerfile                             # Multi-stage container build
+├── package.json                          # Dependencies & scripts
+└── README.md                             # This documentation
+```
+
+### Development Workflow
+```bash
+# Development setup
+npm install
+npm run dev          # Start with hot reload
+
+# Build and test
+npm run build        # Compile TypeScript
+npm start           # Run production build
+npm test            # Run test suite (future)
+
+# Docker development
+docker-compose up patient-service -d
+docker logs hospital-patient-service -f
+```
+
+### Future Enhancements Roadmap
+- [ ] **Document Management**: File upload/download for patient documents
+- [ ] **Advanced Search**: Filters by date range, blood type, medical conditions
+- [ ] **Patient Photos**: Profile image upload and management
+- [ ] **Medical Device Integration**: IoT device data integration
+- [ ] **Mobile API Optimization**: Optimized endpoints for mobile apps
+- [ ] **Real-time Notifications**: WebSocket integration for live updates
+- [ ] **Audit Logging**: Detailed audit trail for all patient data changes
+- [ ] **Data Export**: PDF/Excel export functionality
+- [ ] **Backup & Recovery**: Automated backup and disaster recovery
+- [ ] **Performance Monitoring**: APM integration and metrics
+
+### Contributing Guidelines
+1. Follow TypeScript strict mode requirements
+2. Use shared types from `@hospital/shared` package
+3. Implement comprehensive error handling
+4. Add appropriate logging for debugging
+5. Update API documentation for new endpoints
+6. Test all endpoints before committing
 
 ---
 
+## 📞 Support & Maintenance
+
 **Service Status**: ✅ Production Ready  
-**Last Updated**: August 7, 2025  
-**Version**: 1.0.0  
-**Maintainer**: Hospital Management Team
+**Current Version**: 1.0.0  
+**Last Updated**: August 9, 2025  
+**Maintainer**: Hospital Management Team  
+
+### Getting Help
+- **Documentation**: This README and inline code comments
+- **Health Check**: `GET /health` endpoint for service status
+- **Logs**: Check Docker logs for troubleshooting
+- **Database**: PostgreSQL logs for database issues
+
+### Service Dependencies
+- **@hospital/shared**: Shared types and utilities
+- **PostgreSQL 15+**: Primary database
+- **Node.js 18+**: Runtime environment
+- **Docker**: Containerization platform
