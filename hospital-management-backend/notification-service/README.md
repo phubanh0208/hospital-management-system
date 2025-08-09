@@ -134,43 +134,404 @@ curl http://localhost:3005/health
 | **Sync (Old)** | ~54ms | 201 | ~20 req/min |
 | **🚀 Async (New)** | **~12ms** | **202** | **1000+ req/min** |
 
-### Luồng hoạt động của Notification Service sau khi nâng cấp RabbitMQ
+## Luồng hoạt động của Notification Service sau khi nâng cấp RabbitMQ
 
-🚀 1. Khởi động Service.
-<pre> ```mermaid graph TD A["🚀 Start Container"] --> B["📁 Load Environment Variables"] B --> C["🗄️ Connect MongoDB"] C --> D["🐰 Connect RabbitMQ"] D --> E["🎯 Setup Exchange & Queue"] E --> F["👂 Start Message Consumer"] F --> G["🌐 Start HTTP Server :3005"] G --> H["✅ Service Ready"] C --> C1["📊 Health: MongoDB Connected"] D --> D1["📊 Health: RabbitMQ Connected"] E --> E1["🔧 Exchange: notification_exchange"] E --> E2["📥 Queue: notification_queue"] F --> F1["🔄 Consumer: MessageHandler"] style A fill:#e1f5fe style H fill:#c8e6c9 ``` </pre>
+### **🚀 1. Khởi động Service**
 
- 2. API Request Flow - Async Endpoints
- <pre> ```mermaid graph TD A["📞 POST /api/notifications/async"] --> B["🔍 Validate Request"] B --> C["👤 Get User Preferences"] C --> D["💾 Save to MongoDB"] D --> E["📤 Publish to RabbitMQ"] E --> F["✅ Return 202 Accepted (12ms)"] E --> G["🐰 RabbitMQ Queue"] G --> H["👂 Consumer Receives"] H --> I["⚙️ MessageHandler.processMessage()"] I --> J["📧 Send Email"] I --> K["📱 Send SMS"] I --> L["🌐 Send Web"] J --> M["📝 Log Delivery Status"] K --> M L --> M M --> N["✅ Update Notification Status"] style F fill:#c8e6c9 style N fill:#c8e6c9 ``` </pre>
+```mermaid
+graph TD
+    A["🚀 Start Container"] --> B["📁 Load Environment Variables"]
+    B --> C["🗄️ Connect MongoDB"]
+    C --> D["🐰 Connect RabbitMQ"]
+    D --> E["🎯 Setup Exchange & Queue"]
+    E --> F["👂 Start Message Consumer"]
+    F --> G["🌐 Start HTTP Server :3005"]
+    G --> H["✅ Service Ready"]
 
- So sánh: Sync vs Async..
-<pre> ```mermaid graph LR subgraph "❌ SYNC (Cũ) - 54ms" A1["📞 Request"] --> B1["💾 Save DB"] B1 --> C1["📧 Send Email (2s)"] C1 --> D1["📱 Send SMS (1.5s)"] D1 --> E1["✅ Response"] end subgraph "✅ ASYNC (Mới) - 12ms" A2["📞 Request"] --> B2["💾 Save DB"] B2 --> C2["📤 Queue Message"] C2 --> D2["✅ Response (12ms)"] E2["🐰 Background"] --> F2["📧 Send Email"] E2 --> G2["📱 Send SMS"] end style E1 fill:#ffcdd2 style D2 fill:#c8e6c9 ``` </pre>
+    C --> C1["📊 Health: MongoDB Connected"]
+    D --> D1["📊 Health: RabbitMQ Connected"]
+    E --> E1["🔧 Exchange: notification_exchange"]
+    E --> E2["📥 Queue: notification_queue"]
+    F --> F1["🔄 Consumer: MessageHandler"]
 
-3. Message Processing Flow
-RabbitMQ Message Consumer..
-<pre> ```mermaid graph TD A["🐰 RabbitMQ Message"] --> B["👂 Consumer Receives"] B --> C["📦 Parse JSON"] C --> D["✅ Validate Message"] D --> E["🔍 Determine Message Type"] E --> F["appointment_reminder"] E --> G["prescription_ready"] E --> H["system_alert"] E --> I["bulk_notification"] E --> J["create_notification"] F --> K["🏥 Process Appointment"] G --> L["💊 Process Prescription"] H --> M["🚨 Process System Alert"] I --> N["📢 Process Bulk (Batch)"] J --> O["📝 Process General"] K --> P["📧 Create & Send Notification"] L --> P M --> P N --> P O --> P P --> Q["✅ ACK Message"] style A fill:#e3f2fd style Q fill:#c8e6c9 ``` </pre>
+    style A fill:#e1f5fe
+    style H fill:#c8e6c9
+```
 
-4. Multi-Channel Delivery Flow
-Gửi thông báo qua nhiều kênh...
-<pre> ```mermaid graph TD A["📨 Send Notification"] --> B["🎯 Get Channels"] B --> C["📧 Email Channel"] B --> D["📱 SMS Channel"] B --> E["🌐 Web Channel"] C --> C1["👤 Get User Email"] C1 --> C2["🎨 Render Email Template"] C2 --> C3["📤 SMTP Send"] C3 --> C4["📝 Log: Email Sent"] D --> D1["📞 Get User Phone"] D1 --> D2["🎨 Render SMS Template"] D2 --> D3["📤 Twilio Send"] D3 --> D4["📝 Log: SMS Sent"] E --> E1["💾 Store in DB"] E1 --> E2["🔌 WebSocket Send"] E2 --> E3["📝 Log: Web Sent"] C4 --> F["📊 Update Delivery Log"] D4 --> F E3 --> F F --> G["✅ Mark as Sent"] style G fill:#c8e6c9 ``` </pre>
+---
 
-5. Template Processing Flow
-Dynamic Content Generation...
-<pre> ```mermaid graph TD A["🎨 Render Template"] --> B["🔍 Find Template"] B --> C["📋 Template Found?"] C -->|No| D["❌ Use Default"] C -->|Yes| E["📝 Get Template Content"] E --> F["🔄 Replace Variables"] F --> F1["{{patient_name}} → Nguyễn Văn A"] F --> F2["{{appointment_date}} → 10/08/2025"] F --> F3["{{doctor_name}} → BS. Trần Thị B"] F1 --> G["📧 Email HTML"] F2 --> H["📱 SMS Text"] F3 --> I["🌐 Web Rich Content"] G --> J["✅ Rendered Content"] H --> J I --> J D --> J style J fill:#c8e6c9 style D fill:#ffcdd2 ``` </pre>
+### 2. API Request Flow - Async Endpoints
 
- 6. Hospital-Specific Workflows
-Appointment Reminder Flow....
-<pre> ```mermaid graph TD A["📅 Appointment Service"] --> B["📤 Publish Message"] B --> C["🐰 appointment.reminder"] C --> D["👂 Consumer Receives"] D --> E["🏥 MessageHandler"] E --> F["📝 Build Notification Data"] F --> G["🎨 Template Variables"] G --> G1["patient_name: Nguyễn Văn A"] G --> G2["doctor_name: BS. Trần Thị B"] G --> G3["appointment_date: 10/08/2025"] G --> G4["appointment_time: 14:30"] G --> G5["room_number: P.101"] G1 --> H["📧 Email Template"] G2 --> I["📱 SMS Template"] G3 --> J["🌐 Web Template"] H --> K["📤 Send Multi-Channel"] I --> K J --> K K --> L["✅ Appointment Reminder Sent"] style L fill:#c8e6c9 ``` </pre>
+```mermaid
+graph TD
+    A["📞 POST /api/notifications/async"] --> B["🔍 Validate Request"]
+    B --> C["👤 Get User Preferences"]
+    C --> D["💾 Save to MongoDB"]
+    D --> E["📤 Publish to RabbitMQ"]
+    E --> F["✅ Return 202 Accepted (12ms)"]
 
-Prescription Ready Flow.....
-<pre> ```mermaid graph TD A["💊 Prescription Service"] --> B["📤 Publish Message"] B --> C["🐰 prescription.ready"] C --> D["👂 Consumer Receives"] D --> E["💊 MessageHandler"] E --> F["📝 Build Notification Data"] F --> G["🎨 Template Variables"] G --> G1["patient_name: Lê Thị C"] G --> G2["prescription_number: PX20250808001"] G --> G3["doctor_name: BS. Nguyễn Văn D"] G --> G4["total_cost: 250,000 VNĐ"] G1 --> H["📧 Email: Đơn thuốc sẵn sàng"] G2 --> I["📱 SMS: Vui lòng đến nhận"] G3 --> J["🌐 Web: Rich notification"] H --> K["📤 Send Multi-Channel"] I --> K J --> K K --> L["✅ Prescription Alert Sent"] style L fill:#c8e6c9 ``` </pre>
+    E --> G["🐰 RabbitMQ Queue"]
+    G --> H["👂 Consumer Receives"]
+    H --> I["⚙️ MessageHandler.processMessage()"]
+    I --> J["📧 Send Email"]
+    I --> K["📱 Send SMS"]
+    I --> L["🌐 Send Web"]
 
-7. Bulk Notification Processing
-Batch Processing Flow.......
-<pre> ```mermaid graph TD A["📢 Bulk Request"] --> B["📤 Queue Message"] B --> C["🐰 bulk_notification"] C --> D["👂 Consumer Receives"] D --> E["📊 Get Recipients List"] E --> F["🔄 Process in Batches"] F --> G["📦 Batch 1 (50 users)"] F --> H["📦 Batch 2 (50 users)"] F --> I["📦 Batch N (remaining)"] G --> J["📧 Send to Batch 1"] H --> K["📧 Send to Batch 2"] I --> L["📧 Send to Batch N"] J --> M["⏱️ Delay 100ms"] K --> M L --> M M --> N["✅ All Batches Sent"] style N fill:#c8e6c9 ``` </pre>
+    J --> M["📝 Log Delivery Status"]
+    K --> M
+    L --> M
+    M --> N["✅ Update Notification Status"]
 
-8. Complete End-to-End Flow
-Tổng quan luồng hoàn chỉnh..........
-<pre> ```mermaid graph TB subgraph "🌐 API Layer" A1["POST /async"] A2["POST /queue/appointment-reminder"] A3["POST /queue/prescription-ready"] A4["POST /queue/bulk"] end subgraph "🎮 Controller Layer" B1["NotificationController"] B2["Validate & Queue"] end subgraph "🐰 Message Queue" C1["RabbitMQ Exchange"] C2["notification_queue"] C3["Message Consumer"] end subgraph "⚙️ Processing Layer" D1["MessageHandler"] D2["NotificationService"] D3["TemplateService"] end subgraph "📤 Delivery Layer" E1["EmailService"] E2["SMSService"] E3["WebSocketService"] end subgraph "🗄️ Storage Layer" F1["MongoDB"] F2["Delivery Logs"] end A1 --> B1 A2 --> B1 A3 --> B1 A4 --> B1 B1 --> B2 B2 --> C1 C1 --> C2 C2 --> C3 C3 --> D1 D1 --> D2 D2 --> D3 D2 --> E1 D2 --> E2 D2 --> E3 D2 --> F1 E1 --> F2 E2 --> F2 E3 --> F2 style A1 fill:#e3f2fd style F1 fill:#fff3e0 style F2 fill:#fff3e0 ``` </pre>
+    style F fill:#c8e6c9
+    style N fill:#c8e6c9
+```
+
+---
+
+### So sánh: Sync vs Async
+
+```mermaid
+graph LR
+    subgraph "❌ SYNC (Cũ) - 54ms"
+        A1["📞 Request"] --> B1["💾 Save DB"]
+        B1 --> C1["📧 Send Email (2s)"]
+        C1 --> D1["📱 Send SMS (1.5s)"]
+        D1 --> E1["✅ Response"]
+    end
+
+    subgraph "✅ ASYNC (Mới) - 12ms"
+        A2["📞 Request"] --> B2["💾 Save DB"]
+        B2 --> C2["📤 Queue Message"]
+        C2 --> D2["✅ Response (12ms)"]
+
+        E2["🐰 Background"] --> F2["📧 Send Email"]
+        E2 --> G2["📱 Send SMS"]
+    end
+
+    style E1 fill:#ffcdd2
+    style D2 fill:#c8e6c9
+```
+
+---
+
+### 3. Message Processing Flow - RabbitMQ Consumer
+
+```mermaid
+graph TD
+    A["🐰 RabbitMQ Message"] --> B["👂 Consumer Receives"]
+    B --> C["📦 Parse JSON"]
+    C --> D["✅ Validate Message"]
+    D --> E["🔍 Determine Message Type"]
+
+    E --> F["appointment_reminder"]
+    E --> G["prescription_ready"]
+    E --> H["system_alert"]
+    E --> I["bulk_notification"]
+    E --> J["create_notification"]
+
+    F --> K["🏥 Process Appointment"]
+    G --> L["💊 Process Prescription"]
+    H --> M["🚨 Process System Alert"]
+    I --> N["📢 Process Bulk (Batch)"]
+    J --> O["📝 Process General"]
+
+    K --> P["📧 Create & Send Notification"]
+    L --> P
+    M --> P
+    N --> P
+    O --> P
+
+    P --> Q["✅ ACK Message"]
+
+    style A fill:#e3f2fd
+    style Q fill:#c8e6c9
+```
+
+---
+
+### 4. Multi-Channel Delivery Flow
+
+```mermaid
+graph TD
+    A["📨 Send Notification"] --> B["🎯 Get Channels"]
+    B --> C["📧 Email Channel"]
+    B --> D["📱 SMS Channel"]
+    B --> E["🌐 Web Channel"]
+
+    C --> C1["👤 Get User Email"]
+    C1 --> C2["🎨 Render Email Template"]
+    C2 --> C3["📤 SMTP Send"]
+    C3 --> C4["📝 Log: Email Sent"]
+
+    D --> D1["📞 Get User Phone"]
+    D1 --> D2["🎨 Render SMS Template"]
+    D2 --> D3["📤 Twilio Send"]
+    D3 --> D4["📝 Log: SMS Sent"]
+
+    E --> E1["💾 Store in DB"]
+    E1 --> E2["🔌 WebSocket Send"]
+    E2 --> E3["📝 Log: Web Sent"]
+
+    C4 --> F["📊 Update Delivery Log"]
+    D4 --> F
+    E3 --> F
+    F --> G["✅ Mark as Sent"]
+
+    style G fill:#c8e6c9
+```
+
+---
+
+### 5. Template Processing Flow
+
+```mermaid
+graph TD
+    A["🎨 Render Template"] --> B["🔍 Find Template"]
+    B --> C["📋 Template Found?"]
+    C -->|No| D["❌ Use Default"]
+    C -->|Yes| E["📝 Get Template Content"]
+
+    E --> F["🔄 Replace Variables"]
+    F --> F1["{{patient_name}} → Nguyễn Văn A"]
+    F --> F2["{{appointment_date}} → 10/08/2025"]
+    F --> F3["{{doctor_name}} → BS. Trần Thị B"]
+
+    F1 --> G["📧 Email HTML"]
+    F2 --> H["📱 SMS Text"]
+    F3 --> I["🌐 Web Rich Content"]
+
+    G --> J["✅ Rendered Content"]
+    H --> J
+    I --> J
+    D --> J
+
+    style J fill:#c8e6c9
+    style D fill:#ffcdd2
+```
+
+---
+
+### 4. Multi-Channel Delivery Flow
+
+```mermaid
+graph TD
+    A["📨 Send Notification"] --> B["🎯 Get Channels"]
+    B --> C["📧 Email Channel"]
+    B --> D["📱 SMS Channel"]
+    B --> E["🌐 Web Channel"]
+
+    C --> C1["👤 Get User Email"]
+    C1 --> C2["🎨 Render Email Template"]
+    C2 --> C3["📤 SMTP Send"]
+    C3 --> C4["📝 Log: Email Sent"]
+
+    D --> D1["📞 Get User Phone"]
+    D1 --> D2["🎨 Render SMS Template"]
+    D2 --> D3["📤 Twilio Send"]
+    D3 --> D4["📝 Log: SMS Sent"]
+
+    E --> E1["💾 Store in DB"]
+    E1 --> E2["🔌 WebSocket Send"]
+    E2 --> E3["📝 Log: Web Sent"]
+
+    C4 --> F["📊 Update Delivery Log"]
+    D4 --> F
+    E3 --> F
+    F --> G["✅ Mark as Sent"]
+
+    style G fill:#c8e6c9
+```
+
+---
+
+### 5. Template Processing Flow
+
+```mermaid
+graph TD
+    A["🎨 Render Template"] --> B["🔍 Find Template"]
+    B --> C["📋 Template Found?"]
+    C -->|No| D["❌ Use Default"]
+    C -->|Yes| E["📝 Get Template Content"]
+
+    E --> F["🔄 Replace Variables"]
+    F --> F1["{{patient_name}} → Nguyễn Văn A"]
+    F --> F2["{{appointment_date}} → 10/08/2025"]
+    F --> F3["{{doctor_name}} → BS. Trần Thị B"]
+
+    F1 --> G["📧 Email HTML"]
+    F2 --> H["📱 SMS Text"]
+    F3 --> I["🌐 Web Rich Content"]
+
+    G --> J["✅ Rendered Content"]
+    H --> J
+    I --> J
+    D --> J
+
+    style J fill:#c8e6c9
+    style D fill:#ffcdd2
+```
+
+---
+
+### 6. Hospital-Specific Workflows
+
+#### Appointment Reminder Flow
+
+```mermaid
+graph TD
+    A["📅 Appointment Service"] --> B["📤 Publish Message"]
+    B --> C["🐰 appointment.reminder"]
+    C --> D["👂 Consumer Receives"]
+    D --> E["🏥 MessageHandler"]
+
+    E --> F["📝 Build Notification Data"]
+    F --> G["🎨 Template Variables"]
+    G --> G1["patient_name: Nguyễn Văn A"]
+    G --> G2["doctor_name: BS. Trần Thị B"]
+    G --> G3["appointment_date: 10/08/2025"]
+    G --> G4["appointment_time: 14:30"]
+    G --> G5["room_number: P.101"]
+
+    G1 --> H["📧 Email Template"]
+    G2 --> I["📱 SMS Template"]
+    G3 --> J["🌐 Web Template"]
+
+    H --> K["📤 Send Multi-Channel"]
+    I --> K
+    J --> K
+
+    K --> L["✅ Appointment Reminder Sent"]
+
+    style L fill:#c8e6c9
+```
+
+#### Prescription Ready Flow
+
+```mermaid
+graph TD
+    A["💊 Prescription Service"] --> B["📤 Publish Message"]
+    B --> C["🐰 prescription.ready"]
+    C --> D["👂 Consumer Receives"]
+    D --> E["💊 MessageHandler"]
+
+    E --> F["📝 Build Notification Data"]
+    F --> G["🎨 Template Variables"]
+    G --> G1["patient_name: Lê Thị C"]
+    G --> G2["prescription_number: PX20250808001"]
+    G --> G3["doctor_name: BS. Nguyễn Văn D"]
+    G --> G4["total_cost: 250,000 VNĐ"]
+
+    G1 --> H["📧 Email: Đơn thuốc sẵn sàng"]
+    G2 --> I["📱 SMS: Vui lòng đến nhận"]
+    G3 --> J["🌐 Web: Rich notification"]
+
+    H --> K["📤 Send Multi-Channel"]
+    I --> K
+    J --> K
+
+    K --> L["✅ Prescription Alert Sent"]
+
+    style L fill:#c8e6c9
+```
+
+---
+
+### 7. Bulk Notification Processing
+
+```mermaid
+graph TD
+    A["📢 Bulk Request"] --> B["📤 Queue Message"]
+    B --> C["🐰 bulk_notification"]
+    C --> D["👂 Consumer Receives"]
+    D --> E["📊 Get Recipients List"]
+
+    E --> F["🔄 Process in Batches"]
+    F --> G["📦 Batch 1 (50 users)"]
+    F --> H["📦 Batch 2 (50 users)"]
+    F --> I["📦 Batch N (remaining)"]
+
+    G --> J["📧 Send to Batch 1"]
+    H --> K["📧 Send to Batch 2"]
+    I --> L["📧 Send to Batch N"]
+
+    J --> M["⏱️ Delay 100ms"]
+    K --> M
+    L --> M
+
+    M --> N["✅ All Batches Sent"]
+
+    style N fill:#c8e6c9
+```
+
+---
+
+### 8. Complete End-to-End Flow
+
+```mermaid
+graph TB
+    subgraph "🌐 API Layer"
+        A1["POST /async"]
+        A2["POST /queue/appointment-reminder"]
+        A3["POST /queue/prescription-ready"]
+        A4["POST /queue/bulk"]
+    end
+
+    subgraph "🎮 Controller Layer"
+        B1["NotificationController"]
+        B2["Validate & Queue"]
+    end
+
+    subgraph "🐰 Message Queue"
+        C1["RabbitMQ Exchange"]
+        C2["notification_queue"]
+        C3["Message Consumer"]
+    end
+
+    subgraph "⚙️ Processing Layer"
+        D1["MessageHandler"]
+        D2["NotificationService"]
+        D3["TemplateService"]
+    end
+
+    subgraph "📤 Delivery Layer"
+        E1["EmailService"]
+        E2["SMSService"]
+        E3["WebSocketService"]
+    end
+
+    subgraph "🗄️ Storage Layer"
+        F1["MongoDB"]
+        F2["Delivery Logs"]
+    end
+
+    A1 --> B1
+    A2 --> B1
+    A3 --> B1
+    A4 --> B1
+
+    B1 --> B2
+    B2 --> C1
+    C1 --> C2
+    C2 --> C3
+
+    C3 --> D1
+    D1 --> D2
+    D2 --> D3
+
+    D2 --> E1
+    D2 --> E2
+    D2 --> E3
+
+    D2 --> F1
+    E1 --> F2
+    E2 --> F2
+    E3 --> F2
+
+    style A1 fill:#e3f2fd
+    style F1 fill:#fff3e0
+    style F2 fill:#fff3e0
+```
+
 
 ### Health Check
 
