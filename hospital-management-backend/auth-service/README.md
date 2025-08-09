@@ -181,20 +181,38 @@ Authorization: Bearer {token}
 sequenceDiagram
     participant Client
     participant AuthService
-    participant APIGateway
+    participant Database
+    
+    Client->>AuthService: POST /api/auth/register
+    AuthService->>Database: Check user exists
+    AuthService->>Database: Hash password & create user
+    AuthService-->>Client: User created (201)
     
     Client->>AuthService: POST /api/auth/login
-    AuthService-->>Client: Access Token + Refresh Token
+    AuthService->>Database: Verify credentials
+    AuthService->>AuthService: Generate JWT tokens
+    AuthService->>Database: Store refresh token
+    AuthService-->>Client: Access Token + Refresh Token (200)
+```
+2. Token Management Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthService
+    participant APIGateway
+    participant OtherServices
     
     Client->>APIGateway: API Request + Access Token
-    APIGateway->>AuthService: GET /api/auth/profile (verify)
-    AuthService-->>APIGateway: User data
-    APIGateway-->>Client: API Response
+    APIGateway->>AuthService: GET /api/auth/profile (verify token)
+    AuthService-->>APIGateway: User info (200) or Error (401)
+    APIGateway->>OtherServices: Forward request with user context
+    OtherServices-->>Client: Response
     
-    Note over Client: Token expires (15min)
+    Note over Client: Access Token expires (15 min)
     
-    Client->>AuthService: POST /api/auth/refresh
-    AuthService-->>Client: New Tokens
+    Client->>AuthService: POST /api/auth/refresh + Refresh Token
+    AuthService-->>Client: New Access Token + New Refresh Token
 ```
 
 ### 🔑 Token Management
