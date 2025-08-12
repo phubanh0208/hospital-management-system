@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctor Analytics - {{ hospital_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    .chart-container {
+        height: 350px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="my-4"><i class="fas fa-user-md me-2"></i>Doctor Analytics Dashboard</h2>
+
+    <!-- Statistics Cards -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-calendar-check me-2"></i>Total Appointments</h5>
+                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_appointments|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card bg-info text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users me-2"></i>Unique Patients</h5>
+                    <p class="card-text fs-4 fw-bold">{{ dashboard.unique_patients|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card bg-success text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-prescription-bottle-alt me-2"></i>Total Prescriptions</h5>
+                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_prescriptions|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card bg-warning text-dark h-100">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-dollar-sign me-2"></i>Total Revenue</h5>
+                    <p class="card-text fs-4 fw-bold">${{ dashboard.total_revenue|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mt-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-2"></i>Appointment Trends (Last 7 Days)
+                </div>
+                <div class="card-body chart-container">
+                    <canvas id="appointmentTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-stethoscope me-2"></i>Top 5 Conditions
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for condition in dashboard.top_conditions %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ condition.reason }}
+                            <span class="badge bg-primary rounded-pill">{{ condition.frequency }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">No conditions data available.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-user-injured me-2"></i>Patient Analytics
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Patient Name</th>
+                                    <th>Appointment Count</th>
+                                    <th>Last Appointment</th>
+                                    <th>Common Conditions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for patient in dashboard.patients %}
+                                <tr>
+                                    <td>{{ patient.patient_name }}</td>
+                                    <td>{{ patient.appointment_count }}</td>
+                                    <td>{{ patient.last_appointment }}</td>
+                                    <td>{{ patient.common_conditions }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No patient data available.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Appointment Trends Chart
+    const appointmentTrendsCtx = document.getElementById('appointmentTrendsChart').getContext('2d');
+    new Chart(appointmentTrendsCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for trend in dashboard.recent_trends %}'{{ trend.appointment_date }}',{% endfor %}],
+            datasets: [{
+                label: 'Appointments',
+                data: [{% for trend in dashboard.recent_trends %}{{ trend.daily_count }},{% endfor %}],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+</script>
+{% endblock %}

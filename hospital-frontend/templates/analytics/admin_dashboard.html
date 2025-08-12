@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Analytics - {{ hospital_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        border-radius: 15px;
+        box-shadow: var(--shadow-md);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+    .chart-container {
+        height: 350px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="my-4"><i class="fas fa-tachometer-alt me-2" style="color: var(--brand-primary);"></i>Admin Analytics Dashboard</h2>
+
+    <!-- Statistics Cards -->
+    <div class="row">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-users me-2"></i>Total Patients</h5>
+                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_patients|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, var(--brand-secondary), var(--brand-primary));">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-user-md me-2"></i>Total Doctors</h5>
+                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_doctors|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, #20c997, #00D1B2);">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-dollar-sign me-2"></i>Total Revenue</h5>
+                    <p class="card-text fs-4 fw-bold">${{ dashboard.total_revenue|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, #64748b, #334155);">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-check-circle me-2"></i>Completion Rate</h5>
+                    <p class="card-text fs-4 fw-bold">{{ dashboard.completion_rate|default:0 }}%</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row mt-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-line me-2"></i>Daily Trends (Last 30 Days)
+                </div>
+                <div class="card-body chart-container">
+                    <canvas id="dailyTrendsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-venus-mars me-2"></i>Patient Demographics
+                </div>
+                <div class="card-body chart-container">
+                    <canvas id="genderDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-2"></i>Financial Overview
+                </div>
+                <div class="card-body chart-container">
+                    <canvas id="financialOverviewChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-pills me-2"></i>Prescription Analytics
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <h5 class="text-primary mb-1">{{ dashboard.prescription_analytics.total_prescriptions|default:0 }}</h5>
+                                <small class="text-muted">Total Prescriptions</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <h5 class="text-success mb-1">${{ dashboard.prescription_analytics.total_cost|floatformat:2|default:0 }}</h5>
+                                <small class="text-muted">Total Cost</small>
+                            </div>
+                        </div>
+                    </div>
+                    <h6 class="text-muted mb-2">Top 5 Medications</h6>
+                    <ul class="list-group list-group-flush">
+                        {% for med in dashboard.prescription_analytics.top_medications %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ med.medication_name }}
+                            <span class="badge bg-primary rounded-pill">{{ med.prescription_count }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item">No medication data available.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Tables -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-user-md me-2"></i>Top 5 Doctors by Revenue
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Doctor</th>
+                                    <th>Specialization</th>
+                                    <th>Appointments</th>
+                                    <th>Completion Rate</th>
+                                    <th>Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doctor in dashboard.top_doctors %}
+                                <tr>
+                                    <td>{{ doctor.doctor_name }}</td>
+                                    <td>{{ doctor.specialization }}</td>
+                                    <td>{{ doctor.appointment_count }}</td>
+                                    <td>{{ doctor.completion_rate }}%</td>
+                                    <td>${{ doctor.doctor_revenue|default:0 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No doctor performance data available.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Daily Trends Chart
+    const dailyTrendsCtx = document.getElementById('dailyTrendsChart').getContext('2d');
+    new Chart(dailyTrendsCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for trend in dashboard.daily_trends %}'{{ trend.trend_date }}',{% endfor %}],
+            datasets: [{
+                label: 'Appointments',
+                data: [{% for trend in dashboard.daily_trends %}{{ trend.appointments_count }},{% endfor %}],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'Revenue',
+                data: [{% for trend in dashboard.daily_trends %}{{ trend.daily_revenue }},{% endfor %}],
+                borderColor: 'rgba(54, 162, 235, 1)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                fill: true,
+                tension: 0.4
+            }]
+        }
+    });
+
+    // Gender Distribution Chart
+    const genderCtx = document.getElementById('genderDistributionChart').getContext('2d');
+    new Chart(genderCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Male', 'Female', 'Other'],
+            datasets: [{
+                label: 'Gender Distribution',
+                data: [
+                    {{ dashboard.patient_demographics.gender_distribution.male|default:0 }},
+                    {{ dashboard.patient_demographics.gender_distribution.female|default:0 }},
+                    {{ dashboard.patient_demographics.gender_distribution.other|default:0 }}
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(255, 206, 86, 0.8)'
+                ]
+            }]
+        }
+    });
+
+    // Financial Overview Chart
+    const financialCtx = document.getElementById('financialOverviewChart').getContext('2d');
+    new Chart(financialCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Total Revenue', 'Total Prescription Cost'],
+            datasets: [{
+                label: 'Amount (USD)',
+                data: [
+                    {{ dashboard.total_revenue|floatformat:2|default:0 }},
+                    {{ dashboard.prescription_analytics.total_cost|floatformat:2|default:0 }}
+                ],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(255, 159, 64, 0.6)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
+
