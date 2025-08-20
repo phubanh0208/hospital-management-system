@@ -1,0 +1,292 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # MICROSERVICES ONLY
+  # =============================================================================
+
+  # Auth Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    image: hospital/auth-service:latest
+    container_name: hospital-auth-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - AUTH_DB_HOST=hospital-auth-db
+      - AUTH_DB_PORT=5432
+      - AUTH_DB_NAME=auth_service_db
+      - AUTH_DB_USER=auth_user
+      - AUTH_DB_PASSWORD=auth_password_123
+      - JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+      - JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+      - DEFAULT_ADMIN_EMAIL=admin@hospital.com
+      - DEFAULT_ADMIN_PASSWORD=Admin123!@#
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=buqcptudw@gmail.com
+      - SMTP_PASSWORD=fakm oirm fwgn cbuf
+      - SMTP_SECURE=false
+      - ENCRYPTION_KEY=a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456
+      - RATE_LIMIT_MAX=2000
+      - RATE_LIMIT_WINDOW_MS=900000
+    # depends_on:
+    #   - hospital-auth-db
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Patient Service
+  patient-service:
+    build:
+      context: .
+      dockerfile: patient-service/Dockerfile
+    image: hospital/patient-service:latest
+    container_name: hospital-patient-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - PORT=3002
+      - PATIENT_DB_HOST=hospital-patient-db
+      - PATIENT_DB_PORT=5432
+      - PATIENT_DB_NAME=patient_service_db
+      - PATIENT_DB_USER=patient_user
+      - PATIENT_DB_PASSWORD=patient_password_123
+      - LOG_LEVEL=info
+      - UPLOAD_PATH=./uploads
+      - MAX_FILE_SIZE=10485760
+      - ALLOWED_FILE_TYPES=pdf,jpg,jpeg,png,doc,docx
+    # depends_on:
+    #   - hospital-patient-db
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Appointment Service
+  appointment-service:
+    build:
+      context: .
+      dockerfile: appointment-service/Dockerfile
+    image: hospital/appointment-service:latest
+    container_name: hospital-appointment-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - PORT=3003
+      - DATABASE_URL=postgresql://appointment_user:appointment_password_123@hospital-appointment-db:5432/appointment_service_db
+      - APPOINTMENT_DB_HOST=hospital-appointment-db
+      - APPOINTMENT_DB_PORT=5432
+      - APPOINTMENT_DB_NAME=appointment_service_db
+      - APPOINTMENT_DB_USER=appointment_user
+      - APPOINTMENT_DB_PASSWORD=appointment_password_123
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PATIENT_SERVICE_URL=http://patient-service:3002
+      - JWT_SECRET=hospital_jwt_secret_key_2024_super_secure
+      - LOG_LEVEL=debug
+      - ENABLE_CONFLICT_DETECTION=true
+      - ENABLE_SLOT_MANAGEMENT=true
+      - DEFAULT_APPOINTMENT_DURATION=30
+    # depends_on:
+    #   - hospital-appointment-db
+    #   - auth-service
+    #   - patient-service
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Prescription Service
+  prescription-service:
+    build:
+      context: .
+      dockerfile: prescription-service/Dockerfile
+    image: hospital/prescription-service:latest
+    container_name: hospital-prescription-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - PORT=3004
+      - PRESCRIPTION_DB_HOST=hospital-prescription-db
+      - PRESCRIPTION_DB_PORT=5432
+      - PRESCRIPTION_DB_NAME=prescription_service_db
+      - PRESCRIPTION_DB_USER=prescription_user
+      - PRESCRIPTION_DB_PASSWORD=prescription_password_123
+      - DB_MAX_CONNECTIONS=20
+      - LOG_LEVEL=info
+    # depends_on:
+    #   - hospital-prescription-db
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Notification Service
+  notification-service:
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
+    image: hospital/notification-service:latest
+    container_name: hospital-notification-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - PORT=3005
+      - MONGODB_URI=mongodb://notification_user:notification_password_123@hospital-notification-db:27017/notification_service_db?authSource=admin
+      - RABBITMQ_URL=amqp://hospital:hospital_mq_123@hospital-rabbitmq:5672/hospital_vhost
+            - NOTIFICATION_QUEUE=notification_queue_v2
+      - NOTIFICATION_EXCHANGE=notification_exchange
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=587
+      - EMAIL_SECURE=false
+      - EMAIL_USER=buqcptudw@gmail.com
+      - EMAIL_PASSWORD=fakm oirm fwgn cbuf
+      - EMAIL_FROM=Hospital Management <noreply@hospital.com>
+      - TWILIO_ACCOUNT_SID=your-twilio-account-sid
+      - TWILIO_AUTH_TOKEN=your-twilio-auth-token
+      - TWILIO_PHONE_NUMBER=+1234567890
+      - WEBSOCKET_CORS_ORIGIN=http://localhost:3000
+      - SERVICE_NAME=notification-service
+      - LOG_LEVEL=info
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PATIENT_SERVICE_URL=http://patient-service:3002
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:3003
+      - PRESCRIPTION_SERVICE_URL=http://prescription-service:3004
+    # depends_on:
+    #   - hospital-notification-db
+    #   - hospital-rabbitmq
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Analytics Service
+  analytics-service:
+    build:
+      context: .
+      dockerfile: analytics-service/Dockerfile
+    image: hospital/analytics-service:latest
+    container_name: hospital-analytics-service
+    ports:
+      - "3006:3006"
+    environment:
+      - NODE_ENV=development
+      - PORT=3006
+      - DATABASE_URL=postgresql://analytics_user:analytics_password_123@hospital-analytics-db:5432/analytics_service_db
+      - DB_HOST=hospital-analytics-db
+      - DB_PORT=5432
+      - DB_NAME=analytics_service_db
+      - DB_USER=analytics_user
+      - DB_PASSWORD=analytics_password_123
+      - SERVICE_NAME=analytics-service
+      - LOG_LEVEL=info
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PATIENT_SERVICE_URL=http://patient-service:3002
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:3003
+      - PRESCRIPTION_SERVICE_URL=http://prescription-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+      - CORS_ORIGIN=http://localhost:3000
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=100
+    # depends_on:
+    #   - hospital-analytics-db
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: hospital/api-gateway:latest
+    container_name: hospital-api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - CORS_ORIGIN=http://localhost:3000,http://localhost:8000
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_EXPIRES_IN=24h
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - PATIENT_SERVICE_URL=http://patient-service:3002
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:3003
+      - PRESCRIPTION_SERVICE_URL=http://prescription-service:3004
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3005
+      - ANALYTICS_SERVICE_URL=http://analytics-service:3006
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - LOG_LEVEL=info
+      - API_DOCS_ENABLED=true
+      - API_DOCS_PATH=/api-docs
+      - HEALTH_CHECK_INTERVAL=30000
+      - GATEWAY_UPSTREAM_TIMEOUT_MS=5000  
+      - GATEWAY_RETRIES=2
+      - GATEWAY_RETRY_BACKOFF_MS=250
+    depends_on:
+      - auth-service
+      - patient-service
+      - appointment-service
+      - prescription-service
+      - notification-service
+      - analytics-service
+    networks:
+      - hospital-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  hospital-network:
+    driver: bridge
+    name: hospital-network
+    external: true
