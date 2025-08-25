@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for Patient Service
+# Multi-stage Dockerfile for Auth Service
 # Build context: hospital-management-backend/ (root directory)
 
 FROM node:18-alpine AS builder
@@ -17,13 +17,13 @@ COPY shared/src/ ./src/
 COPY shared/tsconfig.json ./
 RUN npm run build
 
-# Build patient service
-WORKDIR /app/patient-service
-COPY patient-service/package*.json ./
+# Build auth service
+WORKDIR /app/auth-service
+COPY auth-service/package*.json ./
 RUN npm install
 
-COPY patient-service/src/ ./src/
-COPY patient-service/tsconfig.json ./
+COPY auth-service/src/ ./src/
+COPY auth-service/tsconfig.json ./
 RUN npm run build
 
 # Production stage
@@ -39,9 +39,9 @@ COPY --from=builder /app/shared/dist/ ./shared/dist/
 COPY --from=builder /app/shared/package.json ./shared/
 COPY --from=builder /app/shared/node_modules/ ./shared/node_modules/
 
-# Copy built patient service
-COPY --from=builder /app/patient-service/dist/ ./dist/
-COPY --from=builder /app/patient-service/package*.json ./
+# Copy built auth service
+COPY --from=builder /app/auth-service/dist/ ./dist/
+COPY --from=builder /app/auth-service/package*.json ./
 
 # Install only production dependencies
 RUN npm install --only=production && npm cache clean --force
@@ -52,19 +52,19 @@ RUN mkdir -p node_modules/@hospital && \
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S patient -u 1001 -G nodejs
+    adduser -S auth -u 1001 -G nodejs
 
 # Change ownership of app directory
-RUN chown -R patient:nodejs /app
+RUN chown -R auth:nodejs /app
 
-USER patient
+USER auth
 
 # Expose port
-EXPOSE 3002
+EXPOSE 3001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:3002/health || exit 1
+  CMD curl -f http://localhost:3001/health || exit 1
 
 # Start the service
 CMD ["node", "dist/index.js"]
