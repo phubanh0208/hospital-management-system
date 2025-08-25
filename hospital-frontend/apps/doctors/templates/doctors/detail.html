@@ -1,0 +1,360 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctor Details - {{ doctor.fullName }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .doctor-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .doctor-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid rgba(255,255,255,0.3);
+        object-fit: cover;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-card h5 {
+        color: #333;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .availability-slot {
+        background: #e8f5e8;
+        border: 1px solid #28a745;
+        border-radius: 5px;
+        padding: 0.5rem;
+        margin: 0.25rem;
+        display: inline-block;
+        font-size: 0.9rem;
+    }
+    
+    .schedule-item {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0 5px 5px 0;
+    }
+
+    .bg-light-success {
+        background-color: #d4edda !important;
+    }
+
+    .text-dark {
+        color: #343a40 !important;
+    }
+    
+    .performance-metric {
+        text-align: center;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .performance-metric h4 {
+        color: #007bff;
+        margin-bottom: 0.5rem;
+    }
+    
+    .btn-action {
+        margin: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Error Message -->
+    {% if error_message %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endif %}
+
+    <!-- Doctor Header -->
+    <div class="doctor-header">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                {% if doctor.avatarUrl %}
+                    <img src="{{ doctor.avatarUrl }}"
+                         alt="{{ doctor.fullName }}"
+                         class="doctor-avatar"
+                         onerror="this.src='https://via.placeholder.com/120x120/667eea/white?text=DR'">
+                {% else %}
+                    <img src="{% static 'images/default-doctor.png' %}"
+                         alt="{{ doctor.fullName }}"
+                         class="doctor-avatar"
+                         onerror="this.src='https://via.placeholder.com/120x120/667eea/white?text=DR'">
+                {% endif %}
+            </div>
+            <div class="col-md-8">
+                <h2 class="mb-2 text-dark">{{ doctor.fullName }}</h2>
+                <p class="mb-1 text-dark"><i class="fas fa-stethoscope text-primary"></i> {{ doctor.specialization }}</p>
+                <p class="mb-1 text-dark">
+                    <i class="fas fa-envelope text-primary"></i>
+                    {% if doctor.email %}
+                        {{ doctor.email }}
+                    {% else %}
+                        <span class="text-muted">Private information</span>
+                    {% endif %}
+                </p>
+                {% if doctor.phone %}
+                <p class="mb-1 text-dark"><i class="fas fa-phone text-primary"></i> {{ doctor.phone }}</p>
+                {% endif %}
+                <p class="mb-0">
+                    <span class="badge badge-{% if doctor.isActive %}success{% else %}secondary{% endif %}">
+                        {% if doctor.isActive %}Active{% else %}Inactive{% endif %}
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-2 text-right">
+                <a href="{% url 'doctors:list' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Doctor Information -->
+        <div class="col-md-4">
+            <div class="info-card">
+                <h5><i class="fas fa-user"></i> Doctor Information</h5>
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong class="text-dark">ID:</strong></td>
+                        <td class="text-dark">{{ doctor.userId|slice:":8" }}...</td>
+                    </tr>
+                    <tr>
+                        <td><strong class="text-dark">Username:</strong></td>
+                        <td class="text-dark">{{ doctor.username|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong class="text-dark">Email:</strong></td>
+                        <td class="text-dark">
+                            {% if doctor.email %}
+                                {{ doctor.email }}
+                            {% else %}
+                                <span class="text-muted">Private information</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if doctor.phone %}
+                    <tr>
+                        <td><strong class="text-dark">Phone:</strong></td>
+                        <td class="text-dark">{{ doctor.phone }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td><strong class="text-dark">License Number:</strong></td>
+                        <td class="text-dark">{{ doctor.licenseNumber|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong class="text-dark">Specialization:</strong></td>
+                        <td class="text-dark">{{ doctor.specialization }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong class="text-dark">Years of Experience:</strong></td>
+                        <td class="text-dark">{{ doctor.yearsOfExperience|default:"N/A" }} years</td>
+                    </tr>
+                    <tr>
+                        <td><strong class="text-dark">Consultation Fee:</strong></td>
+                        <td class="text-dark">
+                            {% if doctor.consultationFee %}
+                                ${{ doctor.consultationFee }}
+                            {% else %}
+                                Contact for pricing
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong class="text-dark">Status:</strong></td>
+                        <td>
+                            <span class="badge badge-{% if doctor.isActive %}success{% else %}secondary{% endif %}">
+                                {% if doctor.isActive %}Accepting Patients{% else %}Not Accepting{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Education & Certifications -->
+            {% if doctor.education or doctor.certifications %}
+            <div class="info-card">
+                <h5><i class="fas fa-graduation-cap text-primary"></i> Education & Certifications</h5>
+
+                {% if doctor.education %}
+                <div class="mb-3">
+                    <strong class="text-dark">Education:</strong>
+                    <p class="mb-2 text-dark">{{ doctor.education }}</p>
+                </div>
+                {% endif %}
+
+                {% if doctor.certifications %}
+                <div class="mb-3">
+                    <strong class="text-dark">Certifications:</strong>
+                    <div class="mt-2">
+                        {% for cert in doctor.certifications %}
+                            <span class="badge badge-info mr-1 mb-1">{{ cert }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if doctor.languagesSpoken %}
+                <div class="mb-0">
+                    <strong class="text-dark">Languages:</strong>
+                    <div class="mt-2">
+                        {% for lang in doctor.languagesSpoken %}
+                            <span class="badge badge-secondary mr-1 mb-1">{{ lang }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Quick Actions -->
+            <div class="info-card">
+                <h5><i class="fas fa-tools"></i> Quick Actions</h5>
+                <div class="d-flex flex-wrap">
+                    <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-info btn-action">
+                        <i class="fas fa-clock"></i> View Schedule
+                    </a>
+                    <button class="btn btn-success btn-action" onclick="bookAppointment('{{ doctor.userId }}')">
+                        <i class="fas fa-plus"></i> Book Appointment
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Availability -->
+        <div class="col-md-4">
+            <div class="info-card">
+                <h5><i class="fas fa-calendar-check text-primary"></i> Weekly Schedule</h5>
+                {% if doctor.weeklySchedule %}
+                    <div class="row">
+                        {% for day_schedule in doctor.weeklySchedule %}
+                            <div class="col-12 mb-2">
+                                <div class="d-flex justify-content-between align-items-center p-2 border rounded {% if day_schedule.available %}bg-light-success{% else %}bg-light{% endif %}">
+                                    <strong class="text-dark">{{ day_schedule.day }}</strong>
+                                    {% if day_schedule.available %}
+                                        <span class="badge bg-success">{{ day_schedule.start }} - {{ day_schedule.end }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Closed</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">No schedule information available.</p>
+                {% endif %}
+
+                {% if availability %}
+                    <hr>
+                    <h6 class="text-primary">Current Availability Slots</h6>
+                    {% for slot in availability %}
+                        <div class="availability-slot">
+                            <strong>{{ slot.day_of_week|title }}</strong><br>
+                            {{ slot.start_time }} - {{ slot.end_time }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="info-card">
+                <h5><i class="fas fa-chart-bar"></i> Performance Metrics</h5>
+                {% if performance %}
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="performance-metric">
+                                <h4>{{ performance.totalAppointments|default:0 }}</h4>
+                                <small>Total Appointments</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="performance-metric">
+                                <h4>{{ performance.completedAppointments|default:0 }}</h4>
+                                <small>Completed</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="performance-metric">
+                                <h4>{{ performance.averageRating|default:"N/A" }}</h4>
+                                <small>Average Rating</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="performance-metric">
+                                <h4>{{ performance.patientsSeen|default:0 }}</h4>
+                                <small>Patients Seen</small>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No performance data available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Schedule -->
+        <div class="col-md-4">
+            <div class="info-card">
+                <h5><i class="fas fa-calendar"></i> Recent Schedule</h5>
+                {% if schedule %}
+                    {% for appointment in schedule|slice:":5" %}
+                        <div class="schedule-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ appointment.date }}</strong>
+                                <span class="badge badge-primary">{{ appointment.time }}</span>
+                            </div>
+                            <p class="mb-1">{{ appointment.patientName|default:"Patient" }}</p>
+                            <small class="text-muted">{{ appointment.type|default:"Consultation" }}</small>
+                        </div>
+                    {% endfor %}
+                    {% if schedule|length > 5 %}
+                        <div class="text-center mt-2">
+                            <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-sm btn-outline-primary">
+                                View All Schedule
+                            </a>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted">No scheduled appointments.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function bookAppointment(doctorId) {
+    // Redirect to appointment booking page
+    window.location.href = '/appointments/book/?doctor=' + doctorId;
+}
+</script>
+{% endblock %}

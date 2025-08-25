@@ -7,6 +7,7 @@ import {
   logger 
 } from '@hospital/shared';
 import { v4 as uuidv4 } from 'uuid';
+import { EventService } from './EventService';
 
 export interface PatientResult {
   success: boolean;
@@ -57,17 +58,28 @@ export class PatientService {
       const countResult = await executeQuery(this.pool, countQuery, searchParams);
       const total = parseInt(countResult[0].total);
 
+      // Map sortBy field names to database column names
+      const sortByMapping: { [key: string]: string } = {
+        'fullName': 'full_name',
+        'patientCode': 'patient_code',
+        'dateOfBirth': 'date_of_birth',
+        'createdAt': 'created_at',
+        'updatedAt': 'updated_at'
+      };
+
+      const dbSortBy = sortByMapping[sortBy] || 'full_name';
+
       // Get patients
       const patientsQuery = `
-        SELECT 
-          id, patient_code, full_name, date_of_birth, gender, 
-          phone, email, address, blood_type, allergies, 
+        SELECT
+          id, patient_code, full_name, date_of_birth, gender,
+          phone, email, address, blood_type, allergies,
           medical_history, emergency_contact, insurance_info,
-          created_by_user_id, hospital_id, is_active, 
+          created_by_user_id, hospital_id, is_active,
           created_at, updated_at
-        FROM patients 
+        FROM patients
         ${searchCondition}
-        ORDER BY ${sortBy} ${sortOrder.toUpperCase()}
+        ORDER BY ${dbSortBy} ${sortOrder.toUpperCase()}
         LIMIT $${searchParams.length + 1} OFFSET $${searchParams.length + 2}
       `;
 
@@ -248,6 +260,8 @@ export class PatientService {
 
       const newPatient = this.transformDatabaseRowToPatient(newPatients[0]);
 
+      EventService.sendEvent('patient.registered', newPatient);
+
       return {
         success: true,
         data: newPatient
@@ -352,6 +366,8 @@ export class PatientService {
 
       const updatedPatients = await executeQuery(this.pool, updateQuery, updateValues);
       const updatedPatient = this.transformDatabaseRowToPatient(updatedPatients[0]);
+
+      EventService.sendEvent('patient.updated', updatedPatient);
 
       return {
         success: true,

@@ -4,6 +4,7 @@ import {
   logger 
 } from '@hospital/shared';
 import { v4 as uuidv4 } from 'uuid';
+import { EventService } from './EventService';
 
 export interface PrescriptionResult {
   success: boolean;
@@ -142,12 +143,12 @@ export class PrescriptionService {
 
       // Get prescriptions with pagination
       const query = `
-        SELECT 
+        SELECT
           id, prescription_number, patient_id, patient_name, patient_age, patient_allergies,
           doctor_id, doctor_name, appointment_id, diagnosis, instructions, notes,
           status, issued_date, valid_until, dispensed_by_user_id, dispensed_by_name,
-          dispensed_date, created_at, updated_at
-        FROM prescriptions 
+          dispensed_date, total_amount, currency, created_at, updated_at
+        FROM prescriptions
         ${whereClause}
         ORDER BY ${sortBy} ${sortOrder}
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -155,6 +156,21 @@ export class PrescriptionService {
 
       values.push(limit, offset);
       const prescriptions = await executeQuery(this.pool, query, values);
+
+      // Get prescription items for each prescription
+      for (const prescription of prescriptions) {
+        const itemsQuery = `
+          SELECT
+            id, medication_name, medication_code, dosage, frequency, duration,
+            quantity, unit, unit_price, total_price, instructions, warnings, created_at
+          FROM prescription_items
+          WHERE prescription_id = $1
+          ORDER BY created_at
+        `;
+
+        const items = await executeQuery(this.pool, itemsQuery, [prescription.id]);
+        prescription.items = items;
+      }
 
       return {
         success: true,
@@ -182,12 +198,12 @@ export class PrescriptionService {
     try {
       // Get prescription
       const prescriptionQuery = `
-        SELECT 
+        SELECT
           id, prescription_number, patient_id, patient_name, patient_age, patient_allergies,
           doctor_id, doctor_name, appointment_id, diagnosis, instructions, notes,
           status, issued_date, valid_until, dispensed_by_user_id, dispensed_by_name,
-          dispensed_date, created_at, updated_at
-        FROM prescriptions 
+          dispensed_date, total_amount, currency, created_at, updated_at
+        FROM prescriptions
         WHERE id = $1
       `;
       
@@ -232,12 +248,12 @@ export class PrescriptionService {
   async getPrescriptionByNumber(prescriptionNumber: string): Promise<PrescriptionResult> {
     try {
       const prescriptionQuery = `
-        SELECT 
+        SELECT
           id, prescription_number, patient_id, patient_name, patient_age, patient_allergies,
           doctor_id, doctor_name, appointment_id, diagnosis, instructions, notes,
           status, issued_date, valid_until, dispensed_by_user_id, dispensed_by_name,
-          dispensed_date, created_at, updated_at
-        FROM prescriptions 
+          dispensed_date, total_amount, currency, created_at, updated_at
+        FROM prescriptions
         WHERE prescription_number = $1
       `;
       
@@ -348,6 +364,8 @@ export class PrescriptionService {
 
       prescription.items = insertedItems;
 
+      EventService.sendEvent('prescription.created', prescription);
+
       return {
         success: true,
         data: prescription
@@ -451,6 +469,21 @@ export class PrescriptionService {
           success: false,
           message: 'Prescription not found'
         };
+      }
+
+      // Get the full updated prescription to send in the event
+      const fullPrescriptionResult = await this.getPrescriptionById(id);
+      if (fullPrescriptionResult.success && fullPrescriptionResult.data) {
+        const updatedPrescription = fullPrescriptionResult.data;
+
+        // Send event based on status change
+        if (status === 'dispensed') {
+          EventService.sendEvent('prescription.dispensed', updatedPrescription);
+        } else if (status === 'completed') {
+          EventService.sendEvent('prescription.completed', updatedPrescription);
+        } else {
+          EventService.sendEvent('prescription.updated', updatedPrescription);
+        }
       }
 
       return {

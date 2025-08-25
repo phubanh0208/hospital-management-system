@@ -1,0 +1,26 @@
+@echo off
+echo Starting Hospital Management Backend Services...
+
+echo Starting auth-service...
+start "Auth Service" cmd /k "cd auth-service && npm run dev"
+
+echo Starting patient-service...
+start "Patient Service" cmd /k "cd patient-service && npm run dev"
+
+echo Starting appointment-service...
+start "Appointment Service" cmd /k "cd appointment-service && npm run dev"
+
+echo Starting prescription-service...
+start "Prescription Service" cmd /k "cd prescription-service && npm run dev"
+
+echo Starting notification-service...
+start "Notification Service" cmd /k "cd notification-service && npm run dev"
+
+echo Starting analytics-service...
+start "Analytics Service" cmd /k "cd analytics-service && npm run dev"
+
+echo Starting api-gateway...
+start "API Gateway" cmd /k "cd api-gateway && npm run dev"
+
+echo All services have been started in separate windows!
+pause

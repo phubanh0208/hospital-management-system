@@ -39,7 +39,11 @@ CREATE TABLE prescriptions (
     dispensed_by_user_id UUID,
     dispensed_by_name VARCHAR(255),
     dispensed_date TIMESTAMPTZ,
-    
+
+    -- Pricing (calculated from prescription_items)
+    total_amount DECIMAL(12,2) DEFAULT 0,
+    currency VARCHAR(3) DEFAULT 'VND',
+
     -- Metadata
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -96,6 +100,11 @@ CREATE TABLE medications (
     contraindications TEXT[],
     side_effects TEXT[],
     storage_requirements TEXT,
+
+    -- Pricing
+    unit_price DECIMAL(10,2) DEFAULT 0,
+    currency VARCHAR(3) DEFAULT 'VND',
+
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -235,16 +244,16 @@ CREATE TRIGGER trigger_audit_prescription_changes
     FOR EACH ROW
     EXECUTE FUNCTION audit_prescription_changes();
 
--- Insert sample medications
-INSERT INTO medications (medication_code, medication_name, generic_name, dosage_form, strength, unit) VALUES
-('MED001', 'Paracetamol 500mg', 'Paracetamol', 'tablet', '500', 'mg'),
-('MED002', 'Amoxicillin 250mg', 'Amoxicillin', 'capsule', '250', 'mg'),
-('MED003', 'Ibuprofen 400mg', 'Ibuprofen', 'tablet', '400', 'mg'),
-('MED004', 'Metformin 500mg', 'Metformin', 'tablet', '500', 'mg'),
-('MED005', 'Omeprazole 20mg', 'Omeprazole', 'capsule', '20', 'mg'),
-('MED006', 'Lisinopril 10mg', 'Lisinopril', 'tablet', '10', 'mg'),
-('MED007', 'Atorvastatin 20mg', 'Atorvastatin', 'tablet', '20', 'mg'),
-('MED008', 'Aspirin 81mg', 'Aspirin', 'tablet', '81', 'mg');
+-- Insert sample medications with pricing
+INSERT INTO medications (medication_code, medication_name, generic_name, dosage_form, strength, unit, unit_price) VALUES
+('MED001', 'Paracetamol 500mg', 'Paracetamol', 'tablet', '500', 'mg', 2500.00),
+('MED002', 'Amoxicillin 250mg', 'Amoxicillin', 'capsule', '250', 'mg', 5000.00),
+('MED003', 'Ibuprofen 400mg', 'Ibuprofen', 'tablet', '400', 'mg', 3500.00),
+('MED004', 'Metformin 500mg', 'Metformin', 'tablet', '500', 'mg', 4000.00),
+('MED005', 'Omeprazole 20mg', 'Omeprazole', 'capsule', '20', 'mg', 8000.00),
+('MED006', 'Lisinopril 10mg', 'Lisinopril', 'tablet', '10', 'mg', 6000.00),
+('MED007', 'Atorvastatin 20mg', 'Atorvastatin', 'tablet', '20', 'mg', 12000.00),
+('MED008', 'Aspirin 81mg', 'Aspirin', 'tablet', '81', 'mg', 1500.00);
 
 -- Insert sample drug interactions
 INSERT INTO drug_interactions (drug_a, drug_b, interaction_type, description, recommendation) VALUES
@@ -253,6 +262,53 @@ INSERT INTO drug_interactions (drug_a, drug_b, interaction_type, description, re
 ('Lisinopril', 'Potassium supplements', 'major', 'Increased risk of hyperkalemia', 'Monitor potassium levels closely'),
 ('Omeprazole', 'Clopidogrel', 'moderate', 'Reduced antiplatelet effect', 'Consider alternative PPI or antiplatelet agent'),
 ('Atorvastatin', 'Simvastatin', 'major', 'Increased risk of myopathy', 'Do not use together');
+
+-- Function to calculate prescription total amount
+CREATE OR REPLACE FUNCTION calculate_prescription_total()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update the prescription total_amount when items change
+    UPDATE prescriptions
+    SET total_amount = (
+        SELECT COALESCE(SUM(total_price), 0)
+        FROM prescription_items
+        WHERE prescription_id = COALESCE(NEW.prescription_id, OLD.prescription_id)
+    ),
+    updated_at = NOW()
+    WHERE id = COALESCE(NEW.prescription_id, OLD.prescription_id);
+
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Triggers to automatically update prescription total_amount
+CREATE TRIGGER trigger_calculate_prescription_total_insert
+    AFTER INSERT ON prescription_items
+    FOR EACH ROW EXECUTE FUNCTION calculate_prescription_total();
+
+CREATE TRIGGER trigger_calculate_prescription_total_update
+    AFTER UPDATE ON prescription_items
+    FOR EACH ROW EXECUTE FUNCTION calculate_prescription_total();
+
+CREATE TRIGGER trigger_calculate_prescription_total_delete
+    AFTER DELETE ON prescription_items
+    FOR EACH ROW EXECUTE FUNCTION calculate_prescription_total();
+
+-- Create indexes for better performance
+CREATE INDEX idx_prescriptions_patient_id ON prescriptions(patient_id);
+CREATE INDEX idx_prescriptions_doctor_id ON prescriptions(doctor_id);
+CREATE INDEX idx_prescriptions_status ON prescriptions(status);
+CREATE INDEX idx_prescriptions_issued_date ON prescriptions(issued_date);
+CREATE INDEX idx_prescriptions_prescription_number ON prescriptions(prescription_number);
+CREATE INDEX idx_prescriptions_total_amount ON prescriptions(total_amount);
+
+CREATE INDEX idx_prescription_items_prescription_id ON prescription_items(prescription_id);
+CREATE INDEX idx_prescription_items_medication_code ON prescription_items(medication_code);
+CREATE INDEX idx_prescription_items_total_price ON prescription_items(total_price);
+
+CREATE INDEX idx_medications_medication_code ON medications(medication_code);
+CREATE INDEX idx_medications_medication_name ON medications(medication_name);
+CREATE INDEX idx_medications_is_active ON medications(is_active);
 
 COMMENT ON TABLE prescriptions IS 'Prescription management and tracking';
 COMMENT ON TABLE prescription_items IS 'Individual medications within prescriptions';

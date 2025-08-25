@@ -1,0 +1,172 @@
+### Appointment Service - Doctor API Tests
+
+@baseUrl = http://localhost:3003
+
+### 1. Get all doctors
+GET {{baseUrl}}/api/doctors
+Content-Type: application/json
+
+### 2. Get all doctors with pagination
+GET {{baseUrl}}/api/doctors?page=1&limit=5
+Content-Type: application/json
+
+### 3. Get doctors by specialization
+GET {{baseUrl}}/api/doctors/specialization/Cardiology
+Content-Type: application/json
+
+### 4. Get doctors by specialization with pagination
+GET {{baseUrl}}/api/doctors/specialization/Cardiology?page=1&limit=3
+Content-Type: application/json
+
+### 5. Get available doctors
+GET {{baseUrl}}/api/doctors/available
+Content-Type: application/json
+
+### 6. Get available doctors by specialization
+GET {{baseUrl}}/api/doctors/available?specialization=Neurology
+Content-Type: application/json
+
+### 7. Get available doctors for specific date
+GET {{baseUrl}}/api/doctors/available?date=2024-01-15&specialization=Cardiology
+Content-Type: application/json
+
+### 8. Search doctors
+GET {{baseUrl}}/api/doctors/search?query=john
+Content-Type: application/json
+
+### 9. Search doctors with pagination
+GET {{baseUrl}}/api/doctors/search?query=cardio&page=1&limit=5
+Content-Type: application/json
+
+### 10. Get top rated doctors
+GET {{baseUrl}}/api/doctors/top-rated
+Content-Type: application/json
+
+### 11. Get top rated doctors by specialization
+GET {{baseUrl}}/api/doctors/top-rated?specialization=Cardiology&limit=5
+Content-Type: application/json
+
+### 12. Get doctors by fee range
+GET {{baseUrl}}/api/doctors/fee-range?minFee=100&maxFee=200
+Content-Type: application/json
+
+### 13. Get doctors by fee range with pagination
+GET {{baseUrl}}/api/doctors/fee-range?maxFee=150&page=1&limit=5
+Content-Type: application/json
+
+### 14. Get doctor by ID
+GET {{baseUrl}}/api/doctors/DOCTOR_ID_HERE
+Content-Type: application/json
+
+### 15. Get doctor by user ID
+GET {{baseUrl}}/api/doctors/user/USER_ID_HERE
+Content-Type: application/json
+
+### 16. Get doctors with filters (comprehensive)
+GET {{baseUrl}}/api/doctors?specialization=Cardiology&minRating=4.0&maxConsultationFee=200&isAcceptingPatients=true&search=john&page=1&limit=10
+Content-Type: application/json
+
+### 17. Sync doctor data from auth service (internal API)
+POST {{baseUrl}}/api/doctors/sync
+Content-Type: application/json
+
+{
+  "id": "doctor-profile-id-123",
+  "userId": "user-id-456",
+  "username": "dr_john_doe",
+  "firstName": "John",
+  "lastName": "Doe",
+  "specialization": "Cardiology",
+  "rating": 4.5,
+  "totalReviews": 25,
+  "consultationFee": 150.00,
+  "isAcceptingPatients": true,
+  "availabilityHours": {
+    "monday": {"start": "09:00", "end": "17:00"},
+    "tuesday": {"start": "09:00", "end": "17:00"},
+    "wednesday": {"start": "09:00", "end": "17:00"},
+    "thursday": {"start": "09:00", "end": "17:00"},
+    "friday": {"start": "09:00", "end": "15:00"}
+  }
+}
+
+### Test Scenarios
+
+### Scenario 1: Find cardiologists accepting patients
+GET {{baseUrl}}/api/doctors?specialization=Cardiology&isAcceptingPatients=true
+Content-Type: application/json
+
+### Scenario 2: Find affordable doctors (under $150)
+GET {{baseUrl}}/api/doctors/fee-range?maxFee=150
+Content-Type: application/json
+
+### Scenario 3: Find highly rated doctors (4+ stars)
+GET {{baseUrl}}/api/doctors?minRating=4.0&isAcceptingPatients=true
+Content-Type: application/json
+
+### Scenario 4: Find doctors by name search
+GET {{baseUrl}}/api/doctors/search?query=nguyen
+Content-Type: application/json
+
+### Scenario 5: Find neurologists with good ratings and reasonable fees
+GET {{baseUrl}}/api/doctors?specialization=Neurology&minRating=4.0&maxConsultationFee=200&isAcceptingPatients=true
+Content-Type: application/json
+
+### Scenario 6: Get available doctors for emergency (any specialization)
+GET {{baseUrl}}/api/doctors/available?isAcceptingPatients=true
+Content-Type: application/json
+
+### Scenario 7: Find doctors for specific date and time
+GET {{baseUrl}}/api/doctors/available?date=2024-01-20&specialization=General Medicine
+Content-Type: application/json
+
+### Sample sync data for different specializations
+
+### Sync Neurologist
+POST {{baseUrl}}/api/doctors/sync
+Content-Type: application/json
+
+{
+  "id": "neuro-profile-789",
+  "userId": "neuro-user-101",
+  "username": "dr_sarah_wilson",
+  "firstName": "Sarah",
+  "lastName": "Wilson",
+  "specialization": "Neurology",
+  "rating": 4.8,
+  "totalReviews": 42,
+  "consultationFee": 200.00,
+  "isAcceptingPatients": true,
+  "availabilityHours": {
+    "monday": {"start": "08:00", "end": "16:00"},
+    "tuesday": {"start": "08:00", "end": "16:00"},
+    "wednesday": {"start": "08:00", "end": "16:00"},
+    "thursday": {"start": "08:00", "end": "16:00"},
+    "friday": {"start": "08:00", "end": "14:00"}
+  }
+}
+
+### Sync General Medicine Doctor
+POST {{baseUrl}}/api/doctors/sync
+Content-Type: application/json
+
+{
+  "id": "general-profile-456",
+  "userId": "general-user-789",
+  "username": "dr_michael_brown",
+  "firstName": "Michael",
+  "lastName": "Brown",
+  "specialization": "General Medicine",
+  "rating": 4.2,
+  "totalReviews": 18,
+  "consultationFee": 120.00,
+  "isAcceptingPatients": true,
+  "availabilityHours": {
+    "monday": {"start": "09:00", "end": "18:00"},
+    "tuesday": {"start": "09:00", "end": "18:00"},
+    "wednesday": {"start": "09:00", "end": "18:00"},
+    "thursday": {"start": "09:00", "end": "18:00"},
+    "friday": {"start": "09:00", "end": "17:00"},
+    "saturday": {"start": "09:00", "end": "12:00"}
+  }
+}

@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { UserService } from '../services/UserService';
-import { 
-  createSuccessResponse, 
-  createErrorResponse, 
+import {
+  createSuccessResponse,
+  createErrorResponse,
   validateUser,
+  validateUserProfile,
   calculatePagination,
   logger
 } from '@hospital/shared';
@@ -54,8 +55,20 @@ export class UserController {
       delete updateData.role;
       delete updateData.isActive;
 
+      // Validate profile data if provided
+      if (updateData.profile) {
+        logger.info(`🔍 Validating profile data:`, updateData.profile);
+        const profileErrors = validateUserProfile(updateData.profile);
+        if (profileErrors.length > 0) {
+          logger.error(`❌ Profile validation errors:`, profileErrors);
+          res.status(400).json(createErrorResponse('Profile validation failed', profileErrors));
+          return;
+        }
+        logger.info(`✅ Profile validation passed`);
+      }
+
       const updatedUser = await this.userService.updateUser(userId, updateData);
-      
+
       if (!updatedUser) {
         res.status(404).json(createErrorResponse('User not found'));
         return;

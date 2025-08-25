@@ -9,6 +9,7 @@ import {
 import appointmentRoutes from './routes/appointments';
 import doctorAvailabilityRoutes from './routes/doctorAvailability';
 import appointmentSlotsRoutes from './routes/appointmentSlots';
+import doctorRoutes from './routes/doctors';
 
 const app = express();
 const PORT = parseInt(getEnvVar('PORT', '3003'));
@@ -32,6 +33,7 @@ app.get('/health', (req, res) => {
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/doctor-availability', doctorAvailabilityRoutes);
 app.use('/api/appointment-slots', appointmentSlotsRoutes);
+app.use('/api/doctors', doctorRoutes);
 
 // Error handling
 app.use(errorHandler);

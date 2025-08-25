@@ -10,6 +10,7 @@ dotenv.config();
 import { logger } from '@hospital/shared';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
+import doctorRoutes from './routes/doctors';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
 
@@ -26,13 +27,19 @@ app.use(cors({
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting - Configurable via environment variables
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'), // 15 minutes default
+  max: parseInt(process.env.RATE_LIMIT_MAX || '1000'), // Increased limit for development
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.',
+    retryAfter: Math.ceil(parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000') / 60000) + ' minutes'
+  },
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting for health checks
+  skip: (req) => req.path === '/health'
 });
 app.use(limiter);
 
@@ -56,6 +63,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/doctors', doctorRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

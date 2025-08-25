@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { PatientService } from '../services/PatientService';
-import { 
-  createSuccessResponse, 
+import { VisitSummaryService } from '../services/VisitSummaryService';
+import {
+  createSuccessResponse,
   createErrorResponse,
   validatePatient,
   logger
@@ -9,9 +10,11 @@ import {
 
 export class PatientController {
   private patientService: PatientService;
+  private visitSummaryService: VisitSummaryService;
 
   constructor() {
     this.patientService = new PatientService();
+    this.visitSummaryService = new VisitSummaryService();
   }
 
   // GET /api/patients - Get all patients with pagination
@@ -232,6 +235,42 @@ export class PatientController {
       res.json(createSuccessResponse(result.data, 'Visit summary retrieved successfully'));
     } catch (error) {
       logger.error('Get visit summary error:', error);
+      res.status(500).json(createErrorResponse('Internal server error'));
+    }
+  };
+
+  // POST /api/patients/:id/update-visit-summary - Update visit summary for patient
+  updateVisitSummary = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      const result = await this.visitSummaryService.updateVisitSummary(id);
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse(result.message || 'Failed to update visit summary'));
+        return;
+      }
+
+      res.json(createSuccessResponse(null, 'Visit summary updated successfully'));
+    } catch (error) {
+      logger.error('Update visit summary error:', error);
+      res.status(500).json(createErrorResponse('Internal server error'));
+    }
+  };
+
+  // POST /api/patients/update-all-visit-summaries - Update visit summaries for all patients
+  updateAllVisitSummaries = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const result = await this.visitSummaryService.updateAllVisitSummaries();
+
+      if (!result.success) {
+        res.status(400).json(createErrorResponse(result.message || 'Failed to update visit summaries'));
+        return;
+      }
+
+      res.json(createSuccessResponse({ updated: result.updated }, result.message || 'Visit summaries updated successfully'));
+    } catch (error) {
+      logger.error('Update all visit summaries error:', error);
       res.status(500).json(createErrorResponse('Internal server error'));
     }
   };

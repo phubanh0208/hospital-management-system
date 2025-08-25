@@ -59,7 +59,10 @@ export class UserService {
           userId: user.id,
           firstName: user.first_name || '',
           lastName: user.last_name || '',
-          phone: user.phone ? decryptPhone(user.phone) : ''
+          phone: user.phone ? decryptPhone(user.phone) : '',
+          dateOfBirth: user.date_of_birth || null,
+          address: user.address || '',
+          avatarUrl: user.avatar_url || ''
         } : undefined,
         isActive: user.is_active,
         createdAt: user.created_at,
@@ -128,7 +131,10 @@ export class UserService {
           userId: user.id,
           firstName: user.first_name || '',
           lastName: user.last_name || '',
-          phone: user.phone || ''
+          phone: user.phone || '',
+          dateOfBirth: user.date_of_birth || null,
+          address: user.address || '',
+          avatarUrl: user.avatar_url || ''
         } : undefined,
         isActive: user.is_active,
         createdAt: user.created_at,
@@ -195,10 +201,18 @@ export class UserService {
       const newUser = newUsers[0];
       
       // Create profile if provided
-      if (userData.profile && (userData.profile.firstName || userData.profile.lastName || userData.profile.phone)) {
-        await executeQuery(this.pool, 
-          `INSERT INTO user_profiles (user_id, first_name, last_name, phone) VALUES ($1, $2, $3, $4)`,
-          [newUser.id, userData.profile.firstName || '', userData.profile.lastName || '', userData.profile.phone || '']
+      if (userData.profile && (userData.profile.firstName || userData.profile.lastName || userData.profile.phone || userData.profile.dateOfBirth || userData.profile.address || userData.profile.avatarUrl)) {
+        await executeQuery(this.pool,
+          `INSERT INTO user_profiles (user_id, first_name, last_name, phone, date_of_birth, address, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            newUser.id,
+            userData.profile.firstName || '',
+            userData.profile.lastName || '',
+            userData.profile.phone || '',
+            userData.profile.dateOfBirth || null,
+            userData.profile.address || '',
+            userData.profile.avatarUrl || ''
+          ]
         );
       }
 
@@ -212,7 +226,10 @@ export class UserService {
           userId: newUser.id,
           firstName: userData.profile.firstName || '',
           lastName: userData.profile.lastName || '',
-          phone: userData.profile.phone || ''
+          phone: userData.profile.phone || '',
+          dateOfBirth: userData.profile.dateOfBirth || null,
+          address: userData.profile.address || '',
+          avatarUrl: userData.profile.avatarUrl || ''
         } : undefined,
         isActive: newUser.is_active,
         createdAt: newUser.created_at,
@@ -293,13 +310,25 @@ export class UserService {
           } else if (key === 'phone') {
             profileFields.push(`phone = $${profileParamIndex}`);
             profileParams.push(value ? encryptPhone(value as string) : null);
+          } else if (key === 'dateOfBirth') {
+            profileFields.push(`date_of_birth = $${profileParamIndex}`);
+            profileParams.push(value || null);
+          } else if (key === 'address') {
+            profileFields.push(`address = $${profileParamIndex}`);
+            profileParams.push(value || '');
+          } else if (key === 'avatarUrl') {
+            profileFields.push(`avatar_url = $${profileParamIndex}`);
+            profileParams.push(value || '');
           }
           profileParamIndex++;
         }
 
         if (profileFields.length > 0) {
-          profileFields.push(`updated_at = NOW()`);
-          profileParams.push(id);
+          // Append updated_at only for UPDATE path
+          const updateSetClauses = [...profileFields, 'updated_at = NOW()'];
+
+          // build params for UPDATE: original profile params + user id at the end
+          const updateParams = [...profileParams, id];
 
           // Check if profile exists
           const existingProfile = await executeQuery(
@@ -312,18 +341,27 @@ export class UserService {
             // Update existing profile
             const updateProfileQuery = `
               UPDATE user_profiles 
-              SET ${profileFields.join(', ')}
+              SET ${updateSetClauses.join(', ')}
               WHERE user_id = $${profileParamIndex}
             `;
-            await executeQuery(this.pool, updateProfileQuery, profileParams);
+            await executeQuery(this.pool, updateProfileQuery, updateParams);
           } else {
-            // Create new profile - simplified approach
-            const insertFields = profileFields.map(field => field.split(' = ')[0]);
+            // Create new profile
+            const insertColumns = profileFields
+              .map(field => field.split(' = ')[0])
+              .filter(col => col !== 'updated_at');
+
+            // Build proper parameter placeholders: $1 for user_id, then $2, $3, etc. for profile params
+            const insertValuesPlaceholders = profileParams
+              .map((_, i) => `$${i + 2}`) // Start from $2 since $1 is user_id
+              .join(', ');
+
             const insertProfileQuery = `
-              INSERT INTO user_profiles (user_id, ${insertFields.join(', ')}, created_at, updated_at)
-              VALUES ($${profileParamIndex}, ${profileParams.slice(0, -1).map((_, i) => `$${i + 1}`).join(', ')}, NOW(), NOW())
+              INSERT INTO user_profiles (user_id, ${insertColumns.join(', ')}, created_at, updated_at)
+              VALUES ($1, ${insertValuesPlaceholders}, NOW(), NOW())
             `;
-            await executeQuery(this.pool, insertProfileQuery, profileParams.slice(0, -1));
+            const insertParams = [id, ...profileParams];
+            await executeQuery(this.pool, insertProfileQuery, insertParams);
           }
         }
       }
@@ -395,7 +433,10 @@ export class UserService {
           userId: user.id,
           firstName: user.first_name || '',
           lastName: user.last_name || '',
-          phone: user.phone || ''
+          phone: user.phone || '',
+          dateOfBirth: user.date_of_birth || null,
+          address: user.address || '',
+          avatarUrl: user.avatar_url || ''
         } : undefined,
         isActive: user.is_active,
         createdAt: user.created_at,

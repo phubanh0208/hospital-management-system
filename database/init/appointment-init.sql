@@ -87,8 +87,30 @@ CREATE TABLE appointment_slots (
     max_bookings INTEGER DEFAULT 1,
     current_bookings INTEGER DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    
+
     UNIQUE(doctor_id, slot_date, slot_time)
+);
+
+-- Doctors table (synchronized from auth service)
+-- This table stores cached doctor data for appointment booking performance
+CREATE TABLE doctors (
+    id UUID PRIMARY KEY, -- Doctor profile ID from auth service
+    user_id UUID UNIQUE NOT NULL, -- User ID from auth service
+    username VARCHAR(150) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    specialization VARCHAR(100) NOT NULL,
+    rating DECIMAL(3,2) DEFAULT 0.00 CHECK (rating >= 0.00 AND rating <= 5.00),
+    total_reviews INTEGER DEFAULT 0,
+    consultation_fee DECIMAL(10,2),
+    is_accepting_patients BOOLEAN DEFAULT TRUE,
+    availability_hours JSONB, -- Store availability schedule as JSON
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+    -- Constraints
+    CONSTRAINT chk_total_reviews CHECK (total_reviews >= 0),
+    CONSTRAINT chk_consultation_fee CHECK (consultation_fee >= 0)
 );
 
 -- Indexes for performance
@@ -101,6 +123,14 @@ CREATE INDEX idx_doctor_availability_doctor_id ON doctor_availability(doctor_id)
 CREATE INDEX idx_doctor_availability_day ON doctor_availability(day_of_week);
 CREATE INDEX idx_appointment_slots_doctor_date ON appointment_slots(doctor_id, slot_date);
 CREATE INDEX idx_appointment_conflicts_doctor ON appointment_conflicts(doctor_id);
+
+-- Indexes for doctors table
+CREATE INDEX idx_doctors_user_id ON doctors(user_id);
+CREATE INDEX idx_doctors_specialization ON doctors(specialization);
+CREATE INDEX idx_doctors_rating ON doctors(rating);
+CREATE INDEX idx_doctors_is_accepting_patients ON doctors(is_accepting_patients);
+CREATE INDEX idx_doctors_consultation_fee ON doctors(consultation_fee);
+CREATE INDEX idx_doctors_specialization_rating ON doctors(specialization, rating DESC);
 
 -- Function to auto-generate appointment number
 CREATE OR REPLACE FUNCTION generate_appointment_number()
@@ -204,11 +234,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Function to update doctors table timestamp
+CREATE OR REPLACE FUNCTION update_doctors_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Trigger to update slots
 CREATE TRIGGER trigger_update_appointment_slots
     AFTER INSERT OR UPDATE OR DELETE ON appointments
     FOR EACH ROW
     EXECUTE FUNCTION update_appointment_slots();
+
+-- Trigger to update doctors timestamp
+CREATE TRIGGER update_doctors_updated_at
+    BEFORE UPDATE ON doctors
+    FOR EACH ROW
+    EXECUTE FUNCTION update_doctors_updated_at_column();
 
 -- Insert sample doctor availability (assuming doctor IDs from auth service)
 INSERT INTO doctor_availability (doctor_id, day_of_week, start_time, end_time) VALUES
@@ -253,3 +298,7 @@ COMMENT ON TABLE appointments IS 'Appointment scheduling and management';
 COMMENT ON TABLE doctor_availability IS 'Doctor working hours and availability';
 COMMENT ON TABLE appointment_conflicts IS 'Tracking scheduling conflicts';
 COMMENT ON TABLE appointment_slots IS 'Pre-calculated available appointment slots';
+COMMENT ON TABLE doctors IS 'Synchronized doctor profiles from auth service for appointment booking performance';
+COMMENT ON COLUMN doctors.id IS 'Doctor profile ID from auth service';
+COMMENT ON COLUMN doctors.user_id IS 'User ID from auth service';
+COMMENT ON COLUMN doctors.availability_hours IS 'JSON object storing weekly availability schedule';

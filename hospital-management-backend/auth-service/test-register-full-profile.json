@@ -1,0 +1,14 @@
+{
+  "username": "testuser123",
+  "email": "testuser123@example.com",
+  "password": "TestPass123!@#",
+  "role": "patient",
+  "profile": {
+    "firstName": "Trần Thị",
+    "lastName": "Bình",
+    "phone": "0912345678",
+    "dateOfBirth": "1985-12-20",
+    "address": "456 Đường DEF, Phường UVW, Quận 3, TP.HCM",
+    "avatarUrl": "https://example.com/user-avatar.png"
+  }
+}

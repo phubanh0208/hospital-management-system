@@ -1,0 +1,592 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Prescription{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .prescription-form {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .medication-item {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: #f8f9fa;
+    }
+    
+    .medication-item.template {
+        display: none;
+    }
+    
+    .remove-medication {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+    }
+    
+    .add-medication-btn {
+        border: 2px dashed #667eea;
+        background: transparent;
+        color: #667eea;
+        padding: 1rem;
+        border-radius: 8px;
+        width: 100%;
+        transition: all 0.3s;
+    }
+    
+    .add-medication-btn:hover {
+        background: #667eea;
+        color: white;
+    }
+    
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ced4da;
+        border-radius: 0.375rem;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+    
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    
+    .patient-info {
+        background: #e3f2fd;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .required-field::after {
+        content: " *";
+        color: red;
+    }
+
+    /* Auto-populated field styles */
+    .bg-light {
+        background-color: #f8f9fa !important;
+        border-color: #e9ecef;
+    }
+
+    .auto-populated {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .auto-populated:focus {
+        box-shadow: none;
+        border-color: #dee2e6;
+    }
+
+    .section-header small {
+        opacity: 0.8;
+        font-size: 0.85rem;
+    }
+
+    .text-muted {
+        font-size: 0.8rem;
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">📝 Create New Prescription</h1>
+            <p class="text-muted">Create electronic prescription for patient</p>
+        </div>
+        <div>
+            <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <form method="post" id="prescriptionForm">
+        {% csrf_token %}
+        
+        <!-- Patient Information -->
+        <div class="prescription-form">
+            <div class="section-header">
+                <h4 class="mb-0"><i class="fas fa-user"></i> Patient Information</h4>
+                <small class="text-light">Auto-populated from selected patient</small>
+            </div>
+
+            {% if selected_patient %}
+                <!-- Hidden fields for form submission -->
+                <input type="hidden" name="patient_id" value="{{ selected_patient.id }}">
+                <input type="hidden" name="patient_name" value="{{ selected_patient.fullName }}">
+                <input type="hidden" name="patient_age" value="{% if selected_patient.calculated_age %}{{ selected_patient.calculated_age }}{% elif selected_patient.age %}{{ selected_patient.age }}{% endif %}">
+                <input type="hidden" name="patient_allergies" value="{{ selected_patient.allergies }}">
+                {% if appointment %}
+                    <input type="hidden" name="appointment_id" value="{{ appointment.id }}">
+                {% endif %}
+
+                <!-- Read-only display fields -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Patient ID</label>
+                        <input type="text" class="form-control bg-light" value="{{ selected_patient.id }}" readonly>
+                        <small class="text-muted">Auto-populated</small>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control bg-light" value="{{ selected_patient.fullName }}" readonly>
+                        <small class="text-muted">Auto-populated</small>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Age</label>
+                        <input type="text" class="form-control bg-light" value="{% if selected_patient.calculated_age %}{{ selected_patient.calculated_age }}{% elif selected_patient.age %}{{ selected_patient.age }}{% else %}N/A{% endif %}" readonly>
+                        <small class="text-muted">Auto-populated</small>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Gender</label>
+                        <input type="text" class="form-control bg-light" value="{{ selected_patient.gender|default:'N/A'|title }}" readonly>
+                        <small class="text-muted">Auto-populated</small>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-control bg-light" value="{{ selected_patient.phone|default:'N/A' }}" readonly>
+                        <small class="text-muted">Auto-populated</small>
+                    </div>
+                </div>
+
+                {% if selected_patient.allergies %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Patient Allergies:</strong> {{ selected_patient.allergies }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <a href="{% url 'prescriptions:patient_selection' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-user-edit me-2"></i>Change Patient
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No patient selected. Please select a patient first.
+                    <a href="{% url 'prescriptions:patient_selection' %}" class="btn btn-primary ms-3">
+                        <i class="fas fa-user-plus me-2"></i>Select Patient
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Doctor Information -->
+        {% if doctor_info %}
+        <div class="prescription-form">
+            <div class="section-header">
+                <h4 class="mb-0"><i class="fas fa-user-md"></i> Prescribing Doctor</h4>
+                <small class="text-light">Auto-populated from current session</small>
+            </div>
+
+            <!-- Hidden fields for form submission -->
+            <input type="hidden" name="doctor_id" value="{{ doctor_info.id }}">
+            <input type="hidden" name="doctor_name" value="{{ doctor_info.name }}">
+
+            <!-- Read-only display fields -->
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">Doctor ID</label>
+                    <input type="text" class="form-control bg-light" value="{{ doctor_info.id }}" readonly>
+                    <small class="text-muted">Auto-populated</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Doctor Name</label>
+                    <input type="text" class="form-control bg-light" value="{{ doctor_info.name }}" readonly>
+                    <small class="text-muted">Auto-populated</small>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Email</label>
+                    <input type="text" class="form-control bg-light" value="{{ doctor_info.email|default:'N/A' }}" readonly>
+                    <small class="text-muted">Auto-populated</small>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Prescription Details -->
+        <div class="prescription-form">
+            <div class="section-header">
+                <h4 class="mb-0"><i class="fas fa-stethoscope"></i> Prescription Details</h4>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <label class="form-label required-field">Diagnosis</label>
+                    <textarea class="form-control" name="diagnosis" rows="3" required 
+                              placeholder="Enter primary diagnosis..."></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required-field">General Instructions</label>
+                    <textarea class="form-control" name="instructions" rows="3" required 
+                              placeholder="General instructions for patient..."></textarea>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label class="form-label">Additional Notes</label>
+                    <textarea class="form-control" name="notes" rows="2" 
+                              placeholder="Additional notes (optional)..."></textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label required-field">Valid Until</label>
+                    <input type="date" class="form-control" name="valid_until" required 
+                           min="{{ today|date:'Y-m-d' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Medications -->
+        <div class="prescription-form">
+            <div class="section-header">
+                <h4 class="mb-0"><i class="fas fa-pills"></i> Medications</h4>
+            </div>
+            
+            <div id="medicationsContainer">
+                <!-- Medication items will be added here -->
+            </div>
+            
+            <button type="button" class="add-medication-btn" id="addMedicationBtn">
+                <i class="fas fa-plus"></i> Add Medication
+            </button>
+        </div>
+
+        <!-- Prescription Total -->
+        <div class="prescription-form">
+            <div class="row">
+                <div class="col-md-6 offset-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body text-center">
+                            <h5 class="card-title text-primary">
+                                <i class="fas fa-calculator"></i> Prescription Total
+                            </h5>
+                            <h3 class="text-success mb-0" id="prescriptionTotalDisplay">
+                                0 VND
+                            </h3>
+                            <small class="text-muted">Total amount for all medications</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <div class="prescription-form">
+            <div class="row">
+                <div class="col-12 text-end">
+                    <button type="button" class="btn btn-outline-secondary me-2" onclick="history.back()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button type="submit" class="btn btn-success" name="status" value="draft">
+                        <i class="fas fa-save"></i> Save as Draft
+                    </button>
+                    <button type="submit" class="btn btn-primary" name="status" value="active">
+                        <i class="fas fa-check"></i> Create & Activate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Medication Item Template -->
+<div class="medication-item template" id="medicationTemplate">
+    <div class="position-relative">
+        <button type="button" class="btn btn-sm btn-outline-danger remove-medication">
+            <i class="fas fa-times"></i>
+        </button>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <label class="form-label required-field">Medication</label>
+                <select class="form-select medication-select" name="medication_name[]" required>
+                    <option value="">Select Medication</option>
+                    {% for medication in medications %}
+                        <option value="{{ medication.medication_name }}" 
+                                data-code="{{ medication.medication_code }}"
+                                data-strength="{{ medication.strength }}"
+                                data-unit="{{ medication.unit }}">
+                            {{ medication.medication_name }} - {{ medication.strength }} {{ medication.unit }}
+                        </option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="medication_code[]" class="medication-code">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label required-field">Dosage</label>
+                <input type="text" class="form-control" name="dosage[]" required 
+                       placeholder="e.g., 500mg">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label required-field">Frequency</label>
+                <select class="form-select" name="frequency[]" required>
+                    <option value="">Select</option>
+                    <option value="Once daily">Once daily</option>
+                    <option value="Twice daily">Twice daily</option>
+                    <option value="Three times daily">Three times daily</option>
+                    <option value="Four times daily">Four times daily</option>
+                    <option value="Every 4 hours">Every 4 hours</option>
+                    <option value="Every 6 hours">Every 6 hours</option>
+                    <option value="Every 8 hours">Every 8 hours</option>
+                    <option value="Every 12 hours">Every 12 hours</option>
+                    <option value="As needed">As needed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label required-field">Duration</label>
+                <select class="form-select" name="duration[]" required>
+                    <option value="">Select</option>
+                    <option value="3 days">3 days</option>
+                    <option value="5 days">5 days</option>
+                    <option value="7 days">7 days</option>
+                    <option value="10 days">10 days</option>
+                    <option value="14 days">14 days</option>
+                    <option value="21 days">21 days</option>
+                    <option value="30 days">30 days</option>
+                    <option value="60 days">60 days</option>
+                    <option value="90 days">90 days</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label required-field">Quantity</label>
+                <div class="input-group">
+                    <input type="number" class="form-control quantity-input" name="quantity[]" required min="1" value="1">
+                    <select class="form-select" name="unit[]" style="max-width: 80px;">
+                        <option value="viên">viên</option>
+                        <option value="gói">gói</option>
+                        <option value="chai">chai</option>
+                        <option value="tuýp">tuýp</option>
+                        <option value="ml">ml</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-3">
+                <label class="form-label">Unit Price (VND)</label>
+                <input type="number" class="form-control unit-price-input" name="unit_price[]" min="0" step="100"
+                       placeholder="0">
+                <small class="text-muted">Auto-filled from medication database (editable)</small>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Total Price (VND)</label>
+                <input type="number" class="form-control total-price-display" readonly
+                       placeholder="0" style="background-color: #f8f9fa;">
+                <small class="text-muted">Calculated automatically</small>
+            </div>
+            <div class="col-md-6">
+                <!-- Spacer for alignment -->
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-12">
+                <label class="form-label">Special Instructions</label>
+                <input type="text" class="form-control" name="item_instructions[]" 
+                       placeholder="Special instructions for this medication...">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    let medicationCount = 0;
+    
+    // Initialize Select2 for patient selection
+    $('#patientSelect').select2({
+        placeholder: 'Search and select patient...',
+        allowClear: true
+    });
+    
+    // Handle patient selection
+    $('#patientSelect').on('change', function() {
+        const selectedOption = $(this).find('option:selected');
+        $('#patientName').val(selectedOption.data('name') || '');
+        $('#patientAge').val(selectedOption.data('age') || '');
+        $('#patientAllergies').val(selectedOption.data('allergies') || '');
+    });
+    
+    // Set default valid until date (30 days from now)
+    const validUntilDate = new Date();
+    validUntilDate.setDate(validUntilDate.getDate() + 30);
+    $('input[name="valid_until"]').val(validUntilDate.toISOString().split('T')[0]);
+    
+    // Add first medication item
+    addMedicationItem();
+    
+    // Add medication button
+    $('#addMedicationBtn').on('click', function() {
+        addMedicationItem();
+    });
+    
+    // Function to add medication item
+    function addMedicationItem() {
+        medicationCount++;
+        const template = $('#medicationTemplate').clone();
+        template.removeClass('template').attr('id', 'medication-' + medicationCount);
+        template.find('.medication-select').attr('id', 'medication-select-' + medicationCount);
+        
+        $('#medicationsContainer').append(template);
+        
+        // Initialize Select2 for the new medication select
+        template.find('.medication-select').select2({
+            placeholder: 'Search medications...',
+            allowClear: true,
+            ajax: {
+                url: '{% url "prescriptions:medication_search" %}',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: data.medications
+                    };
+                },
+                cache: true
+            }
+        });
+        
+        // Handle medication selection from Select2
+        template.find('.medication-select').on('select2:select', function(e) {
+            const data = e.params.data;
+            const medicationItem = $(this).closest('.medication-item');
+            const codeInput = medicationItem.find('.medication-code');
+            const unitPriceInput = medicationItem.find('.unit-price-input');
+
+            // Set medication code from the selected data
+            if (data.medication_code) {
+                codeInput.val(data.medication_code);
+            }
+
+            // Set unit price from the selected data
+            if (data.unit_price) {
+                unitPriceInput.val(data.unit_price);
+                calculateTotalPrice(medicationItem);
+            }
+        });
+
+        // Handle quantity change for price calculation
+        template.find('.quantity-input').on('input', function() {
+            const medicationItem = $(this).closest('.medication-item');
+            calculateTotalPrice(medicationItem);
+        });
+
+        // Handle unit price change for price calculation
+        template.find('.unit-price-input').on('input', function() {
+            const medicationItem = $(this).closest('.medication-item');
+            calculateTotalPrice(medicationItem);
+        });
+        
+        // Remove medication button
+        template.find('.remove-medication').on('click', function() {
+            if ($('#medicationsContainer .medication-item:not(.template)').length > 1) {
+                $(this).closest('.medication-item').remove();
+            } else {
+                alert('At least one medication is required.');
+            }
+        });
+        
+        template.show();
+    }
+
+    // Function to calculate total price for a medication item
+    function calculateTotalPrice(medicationItem) {
+        const quantity = parseFloat(medicationItem.find('.quantity-input').val()) || 0;
+        const unitPrice = parseFloat(medicationItem.find('.unit-price-input').val()) || 0;
+        const totalPrice = quantity * unitPrice;
+
+        medicationItem.find('.total-price-display').val(totalPrice.toFixed(0));
+
+        // Calculate and display prescription total
+        calculatePrescriptionTotal();
+    }
+
+    // Function to calculate total prescription amount
+    function calculatePrescriptionTotal() {
+        let prescriptionTotal = 0;
+
+        $('#medicationsContainer .medication-item:not(.template)').each(function() {
+            const totalPrice = parseFloat($(this).find('.total-price-display').val()) || 0;
+            prescriptionTotal += totalPrice;
+        });
+
+        // Display prescription total
+        $('#prescriptionTotalDisplay').text(prescriptionTotal.toFixed(0) + ' VND');
+    }
+    
+    // Form validation
+    $('#prescriptionForm').on('submit', function(e) {
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Check if at least one medication is added
+        const medicationItems = $('#medicationsContainer .medication-item:not(.template)');
+        if (medicationItems.length === 0) {
+            isValid = false;
+            errorMessage += 'At least one medication is required.\n';
+        }
+        
+        // Validate each medication item
+        medicationItems.each(function() {
+            const medicationName = $(this).find('select[name="medication_name[]"]').val();
+            const dosage = $(this).find('input[name="dosage[]"]').val();
+            const frequency = $(this).find('select[name="frequency[]"]').val();
+            const duration = $(this).find('select[name="duration[]"]').val();
+            const quantity = $(this).find('input[name="quantity[]"]').val();
+            
+            if (!medicationName || !dosage || !frequency || !duration || !quantity) {
+                isValid = false;
+                errorMessage += 'All medication fields are required.\n';
+                return false;
+            }
+        });
+        
+        if (!isValid) {
+            e.preventDefault();
+            alert(errorMessage);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -25,6 +25,7 @@
     "winston": "^3.10.0",
     "joi": "^17.9.2",
     "moment": "^2.29.4",
+    "axios": "^1.6.0",
     "@hospital/shared": "file:../shared"
   },
   "devDependencies": {

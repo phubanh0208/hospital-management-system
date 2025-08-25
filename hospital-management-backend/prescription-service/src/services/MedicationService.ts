@@ -28,6 +28,8 @@ export interface CreateMedicationData {
   dosageForm?: string;
   strength?: string;
   unit?: string;
+  unitPrice?: number;
+  currency?: string;
   contraindications?: string[];
   sideEffects?: string[];
   storageRequirements?: string;
@@ -40,6 +42,8 @@ export interface UpdateMedicationData {
   dosageForm?: string;
   strength?: string;
   unit?: string;
+  unitPrice?: number;
+  currency?: string;
   contraindications?: string[];
   sideEffects?: string[];
   storageRequirements?: string;
@@ -96,11 +100,11 @@ export class MedicationService {
 
       // Get medications with pagination
       const query = `
-        SELECT 
+        SELECT
           id, medication_code, medication_name, generic_name, manufacturer,
           dosage_form, strength, unit, contraindications, side_effects,
-          storage_requirements, is_active, created_at, updated_at
-        FROM medications 
+          storage_requirements, unit_price, currency, is_active, created_at, updated_at
+        FROM medications
         ${whereClause}
         ORDER BY ${sortBy} ${sortOrder}
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -134,11 +138,11 @@ export class MedicationService {
   async getMedicationById(id: string): Promise<MedicationResult> {
     try {
       const query = `
-        SELECT 
+        SELECT
           id, medication_code, medication_name, generic_name, manufacturer,
           dosage_form, strength, unit, contraindications, side_effects,
-          storage_requirements, is_active, created_at, updated_at
-        FROM medications 
+          storage_requirements, unit_price, currency, is_active, created_at, updated_at
+        FROM medications
         WHERE id = $1
       `;
       
@@ -168,11 +172,11 @@ export class MedicationService {
   async getMedicationByCode(medicationCode: string): Promise<MedicationResult> {
     try {
       const query = `
-        SELECT 
+        SELECT
           id, medication_code, medication_name, generic_name, manufacturer,
           dosage_form, strength, unit, contraindications, side_effects,
-          storage_requirements, is_active, created_at, updated_at
-        FROM medications 
+          storage_requirements, unit_price, currency, is_active, created_at, updated_at
+        FROM medications
         WHERE medication_code = $1
       `;
       
@@ -209,6 +213,8 @@ export class MedicationService {
         dosageForm,
         strength,
         unit,
+        unitPrice,
+        currency,
         contraindications,
         sideEffects,
         storageRequirements
@@ -219,19 +225,19 @@ export class MedicationService {
       const query = `
         INSERT INTO medications (
           id, medication_code, medication_name, generic_name, manufacturer,
-          dosage_form, strength, unit, contraindications, side_effects,
+          dosage_form, strength, unit, unit_price, currency, contraindications, side_effects,
           storage_requirements
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-        ) RETURNING 
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+        ) RETURNING
           id, medication_code, medication_name, generic_name, manufacturer,
-          dosage_form, strength, unit, contraindications, side_effects,
+          dosage_form, strength, unit, unit_price, currency, contraindications, side_effects,
           storage_requirements, is_active, created_at, updated_at
       `;
 
       const values = [
         id, medicationCode, medicationName, genericName, manufacturer,
-        dosageForm, strength, unit, contraindications, sideEffects,
+        dosageForm, strength, unit, unitPrice || 0, currency || 'VND', contraindications, sideEffects,
         storageRequirements
       ];
 
@@ -269,6 +275,8 @@ export class MedicationService {
         dosageForm,
         strength,
         unit,
+        unitPrice,
+        currency,
         contraindications,
         sideEffects,
         storageRequirements,
@@ -316,6 +324,18 @@ export class MedicationService {
         paramIndex++;
       }
 
+      if (unitPrice !== undefined) {
+        setFields.push(`unit_price = $${paramIndex}`);
+        values.push(unitPrice);
+        paramIndex++;
+      }
+
+      if (currency) {
+        setFields.push(`currency = $${paramIndex}`);
+        values.push(currency);
+        paramIndex++;
+      }
+
       if (contraindications) {
         setFields.push(`contraindications = $${paramIndex}`);
         values.push(contraindications);
@@ -354,9 +374,9 @@ export class MedicationService {
         UPDATE medications 
         SET ${setFields.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING 
+        RETURNING
           id, medication_code, medication_name, generic_name, manufacturer,
-          dosage_form, strength, unit, contraindications, side_effects,
+          dosage_form, strength, unit, unit_price, currency, contraindications, side_effects,
           storage_requirements, is_active, updated_at
       `;
 
@@ -419,13 +439,13 @@ export class MedicationService {
   async searchMedications(searchTerm: string): Promise<MedicationResult> {
     try {
       const query = `
-        SELECT 
-          id, medication_code, medication_name, generic_name, strength, unit
-        FROM medications 
+        SELECT
+          id, medication_code, medication_name, generic_name, strength, unit, unit_price, currency
+        FROM medications
         WHERE is_active = true
         AND (
-          medication_name ILIKE $1 OR 
-          medication_code ILIKE $1 OR 
+          medication_name ILIKE $1 OR
+          medication_code ILIKE $1 OR
           generic_name ILIKE $1
         )
         ORDER BY medication_name

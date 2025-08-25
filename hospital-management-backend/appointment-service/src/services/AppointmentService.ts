@@ -4,6 +4,7 @@ import {
   logger 
 } from '@hospital/shared';
 import { v4 as uuidv4 } from 'uuid';
+import { EventService } from './EventService';
 
 export interface AppointmentResult {
   success: boolean;
@@ -296,6 +297,10 @@ export class AppointmentService {
 
       const result = await executeQuery(this.pool, query, values);
 
+      if (result.length > 0) {
+        EventService.sendEvent('appointment.created', result[0]);
+      }
+
       return {
         success: true,
         data: result[0],
@@ -361,6 +366,8 @@ export class AppointmentService {
         };
       }
 
+      EventService.sendEvent('appointment.updated', result[0]);
+
       return {
         success: true,
         data: result[0],
@@ -394,6 +401,8 @@ export class AppointmentService {
           message: 'Appointment not found or cannot be cancelled'
         };
       }
+
+      EventService.sendEvent('appointment.cancelled', result[0]);
 
       return {
         success: true,
@@ -429,6 +438,8 @@ export class AppointmentService {
         };
       }
 
+      EventService.sendEvent('appointment.updated', result[0]); // Confirmed is a status update
+
       return {
         success: true,
         data: result[0],
@@ -463,6 +474,8 @@ export class AppointmentService {
           message: 'Appointment not found or cannot be completed'
         };
       }
+
+      EventService.sendEvent('appointment.completed', result[0]);
 
       return {
         success: true,

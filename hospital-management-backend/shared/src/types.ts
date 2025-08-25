@@ -16,7 +16,10 @@ export interface UserProfile {
   firstName: string;
   lastName: string;
   phone?: string;
-  avatar?: string;
+  dateOfBirth?: Date | null;
+  address?: string;
+  avatarUrl?: string;
+  avatar?: string; // Keep for backward compatibility
   department?: string;
   specialization?: string;
   licenseNumber?: string;

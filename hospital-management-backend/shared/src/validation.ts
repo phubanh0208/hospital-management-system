@@ -1,9 +1,9 @@
-import { 
-  User, Patient, Appointment, Prescription, 
-  UserRole, Gender, BloodType, AppointmentStatus, 
+import {
+  User, UserProfile, Patient, Appointment, Prescription,
+  UserRole, Gender, BloodType, AppointmentStatus,
   PrescriptionStatus, NotificationType
 } from './types';
-import { isValidEmail, isValidPhone, isValidUUID } from './utils';
+import { isValidEmail, isValidPhone, isValidUUID, isValidUrl } from './utils';
 
 // User validation
 export const validateUser = (data: Partial<User>): string[] => {
@@ -27,6 +27,45 @@ export const validateUser = (data: Partial<User>): string[] => {
     errors.push('Invalid user role');
   }
   
+  return errors;
+};
+
+// User profile validation
+export const validateUserProfile = (data: Partial<UserProfile>): string[] => {
+  const errors: string[] = [];
+
+  if (data.firstName && data.firstName.trim().length < 1) {
+    errors.push('First name cannot be empty');
+  }
+
+  if (data.lastName && data.lastName.trim().length < 1) {
+    errors.push('Last name cannot be empty');
+  }
+
+  if (data.phone && !isValidPhone(data.phone)) {
+    errors.push('Invalid phone number format');
+  }
+
+  if (data.dateOfBirth) {
+    const dob = new Date(data.dateOfBirth);
+    const now = new Date();
+    if (dob > now) {
+      errors.push('Date of birth cannot be in the future');
+    }
+    const age = now.getFullYear() - dob.getFullYear();
+    if (age > 150) {
+      errors.push('Invalid date of birth');
+    }
+  }
+
+  if (data.address && data.address.trim().length < 5) {
+    errors.push('Address must be at least 5 characters long');
+  }
+
+  if (data.avatarUrl && !isValidUrl(data.avatarUrl)) {
+    errors.push('Invalid avatar URL format');
+  }
+
   return errors;
 };
 
@@ -140,45 +179,47 @@ export const validatePatient = (data: Partial<Patient>, isPartial = false): stri
 };
 
 // Appointment validation
-export const validateAppointment = (data: Partial<Appointment>): string[] => {
+export const validateAppointment = (data: Partial<Appointment>, isPartial = false): string[] => {
   const errors: string[] = [];
   
-  if (!data.patientId) {
+  if (!isPartial && !data.patientId) {
     errors.push('Patient ID is required');
-  } else if (!isValidUUID(data.patientId)) {
+  } else if (data.patientId && !isValidUUID(data.patientId)) {
     errors.push('Invalid patient ID format');
   }
-  
-  if (!data.doctorId) {
+
+  if (!isPartial && !data.doctorId) {
     errors.push('Doctor ID is required');
-  } else if (!isValidUUID(data.doctorId)) {
+  } else if (data.doctorId && !isValidUUID(data.doctorId)) {
     errors.push('Invalid doctor ID format');
   }
-  
-  if (!data.appointmentDate) {
+
+  if (!isPartial && !data.appointmentDate) {
     errors.push('Appointment date is required');
-  } else {
+  } else if (data.appointmentDate) {
     const apptDate = new Date(data.appointmentDate);
     const now = new Date();
     if (apptDate < now) {
       errors.push('Appointment date cannot be in the past');
     }
   }
-  
-  if (!data.appointmentTime) {
+
+  if (!isPartial && !data.appointmentTime) {
     errors.push('Appointment time is required');
   }
-  
+
   if (data.status && !Object.values(AppointmentStatus).includes(data.status as AppointmentStatus)) {
     errors.push('Invalid appointment status');
   }
-  
-  if (!data.type) {
+
+  if (!isPartial && !data.type) {
     errors.push('Appointment type is required');
   }
   
   return errors;
 };
+
+
 
 // Prescription validation - Note: Prescription items are separate entities
 export const validatePrescription = (data: Partial<Prescription>): string[] => {

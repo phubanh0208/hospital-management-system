@@ -175,6 +175,7 @@ cd hospital-management-backend
 - **PgAdmin**: http://localhost:8080
   - Email: `admin@hospital.com`
   - Password: `admin123`
+  - Xem cách sử dụng: `PGADMIN_GUIDE.md`
 - **Mongo Express**: http://localhost:8081
   - Username: `admin`
   - Password: `admin123`

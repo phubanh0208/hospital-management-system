@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctor Availability - {{ doctor.fullName }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .availability-header {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .availability-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .availability-slot {
+        background: #e8f5e8;
+        border: 1px solid #28a745;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .day-info {
+        flex: 1;
+    }
+    
+    .time-info {
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    
+    .status-available {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .status-busy {
+        background: #f8d7da;
+        color: #721c24;
+    }
+    
+    .no-availability {
+        text-align: center;
+        padding: 3rem;
+        color: #6c757d;
+    }
+    
+    .add-availability-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #28a745;
+        color: white;
+        border: none;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .add-availability-btn:hover {
+        background: #218838;
+        transform: scale(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Error Message -->
+    {% if error_message %}
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    {% endif %}
+
+    <!-- Availability Header -->
+    <div class="availability-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h2 class="mb-2">
+                    <i class="fas fa-calendar-check"></i> 
+                    Doctor Availability
+                </h2>
+                <p class="mb-1">{{ doctor.fullName }} - {{ doctor.specialization }}</p>
+                <p class="mb-0">Manage weekly availability schedule</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="{% url 'doctors:detail' doctor.id %}" class="btn btn-light mr-2">
+                    <i class="fas fa-user"></i> Doctor Profile
+                </a>
+                <a href="{% url 'doctors:list' %}" class="btn btn-outline-light">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="availability-card">
+                <h5 class="mb-4">
+                    <i class="fas fa-clock"></i> Weekly Schedule
+                </h5>
+                
+                {% if availability %}
+                    {% for slot in availability %}
+                        <div class="availability-slot">
+                            <div class="day-info">
+                                <h6 class="mb-1">{{ slot.day_of_week|title }}</h6>
+                                <small class="text-muted">
+                                    {% if slot.is_available %}
+                                        Available for appointments
+                                    {% else %}
+                                        Not available
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <div class="time-info">
+                                {{ slot.start_time }} - {{ slot.end_time }}
+                            </div>
+                            <div>
+                                <span class="status-badge {% if slot.is_available %}status-available{% else %}status-busy{% endif %}">
+                                    {% if slot.is_available %}Available{% else %}Busy{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-availability">
+                        <i class="fas fa-calendar-times fa-3x mb-3 text-muted"></i>
+                        <h5>No Availability Set</h5>
+                        <p class="text-muted">This doctor hasn't set their availability schedule yet.</p>
+                        <button class="btn btn-primary" onclick="addAvailability()">
+                            <i class="fas fa-plus"></i> Add Availability
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Quick Stats -->
+            <div class="availability-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-pie"></i> Availability Stats
+                </h5>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="p-3">
+                            <h4 class="text-success">{{ availability|length }}</h4>
+                            <small>Total Slots</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3">
+                            <h4 class="text-primary">
+                                {% if availability %}
+                                    {{ availability|length }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </h4>
+                            <small>Available Days</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="availability-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-tools"></i> Quick Actions
+                </h5>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="addAvailability()">
+                        <i class="fas fa-plus"></i> Add New Slot
+                    </button>
+                    <button class="btn btn-warning" onclick="editAvailability()">
+                        <i class="fas fa-edit"></i> Edit Schedule
+                    </button>
+                    <a href="{% url 'doctors:schedule' doctor.id %}" class="btn btn-info">
+                        <i class="fas fa-calendar"></i> View Schedule
+                    </a>
+                    <button class="btn btn-danger" onclick="clearAvailability()">
+                        <i class="fas fa-trash"></i> Clear All
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tips -->
+            <div class="availability-card">
+                <h6 class="mb-2">
+                    <i class="fas fa-lightbulb text-warning"></i> Tips
+                </h6>
+                <ul class="small text-muted mb-0">
+                    <li>Set regular weekly hours for consistency</li>
+                    <li>Block time for breaks and administrative tasks</li>
+                    <li>Update availability for holidays and vacations</li>
+                    <li>Consider patient preferences for appointment times</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Availability Button -->
+<button class="add-availability-btn" onclick="addAvailability()" title="Add Availability">
+    <i class="fas fa-plus"></i>
+</button>
+
+<script>
+function addAvailability() {
+    alert('Add Availability feature will be implemented in the next phase.');
+}
+
+function editAvailability() {
+    alert('Edit Availability feature will be implemented in the next phase.');
+}
+
+function clearAvailability() {
+    if (confirm('Are you sure you want to clear all availability slots?')) {
+        alert('Clear Availability feature will be implemented in the next phase.');
+    }
+}
+</script>
+{% endblock %}

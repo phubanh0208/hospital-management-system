@@ -1,0 +1,279 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile - {{ hospital_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-edit-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px 0;
+    }
+    
+    .profile-edit-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        margin: 20px auto;
+        max-width: 800px;
+    }
+    
+    .profile-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #667eea;
+    }
+    
+    .profile-header h2 {
+        color: #333;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+    
+    .current-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #667eea;
+        margin-bottom: 20px;
+    }
+    
+    .avatar-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 48px;
+        font-weight: bold;
+        margin: 0 auto 20px;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+    }
+    
+    .form-section h5 {
+        color: #333;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+        border-radius: 10px;
+        padding: 12px 30px;
+        font-weight: 600;
+    }
+    
+    .avatar-preview {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .avatar-preview img {
+        max-width: 120px;
+        max-height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #667eea;
+    }
+    
+    .form-actions {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-edit-container">
+    <div class="container">
+        <div class="profile-edit-card">
+            <div class="profile-header">
+                <h2><i class="fas fa-user-edit me-2"></i>Edit Profile</h2>
+                <p class="text-muted">Update your personal information</p>
+                
+                <!-- Current Avatar Display -->
+                <div class="avatar-preview">
+                    {% if user_data.profile.avatarUrl %}
+                        <img src="{{ user_data.profile.avatarUrl }}" alt="Current Avatar" class="current-avatar" id="current-avatar">
+                    {% else %}
+                        <div class="avatar-placeholder">
+                            {% if user_data.profile.firstName %}
+                                {{ user_data.profile.firstName|first }}{{ user_data.profile.lastName|first }}
+                            {% else %}
+                                {{ user_data.username|first|upper }}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <!-- Personal Information Section -->
+                <div class="form-section">
+                    <h5><i class="fas fa-user me-2"></i>Personal Information</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.first_name|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.last_name|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.phone|as_crispy_field }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.date_of_birth|as_crispy_field }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            {{ form.address|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Avatar Section -->
+                <div class="form-section">
+                    <h5><i class="fas fa-image me-2"></i>Profile Picture</h5>
+                    {{ form.avatar_url|as_crispy_field }}
+                    <div class="avatar-preview mt-3" id="avatar-preview" style="display: none;">
+                        <img id="preview-image" src="" alt="Avatar Preview">
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary me-3">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                    <a href="{% url 'authentication:profile' %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const forms = document.querySelectorAll('.needs-validation');
+    
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        });
+    });
+    
+    // Avatar URL preview
+    const avatarUrlField = document.getElementById('id_avatar_url');
+    const previewContainer = document.getElementById('avatar-preview');
+    const previewImage = document.getElementById('preview-image');
+    const currentAvatar = document.getElementById('current-avatar');
+    
+    if (avatarUrlField) {
+        avatarUrlField.addEventListener('input', function() {
+            const url = this.value.trim();
+            
+            if (url) {
+                // Test if URL is valid image
+                const img = new Image();
+                img.onload = function() {
+                    previewImage.src = url;
+                    previewContainer.style.display = 'block';
+                    if (currentAvatar) {
+                        currentAvatar.style.opacity = '0.5';
+                    }
+                };
+                img.onerror = function() {
+                    previewContainer.style.display = 'none';
+                    if (currentAvatar) {
+                        currentAvatar.style.opacity = '1';
+                    }
+                };
+                img.src = url;
+            } else {
+                previewContainer.style.display = 'none';
+                if (currentAvatar) {
+                    currentAvatar.style.opacity = '1';
+                }
+            }
+        });
+    }
+    
+    // Phone number formatting
+    const phoneField = document.getElementById('id_phone');
+    if (phoneField) {
+        phoneField.addEventListener('input', function() {
+            // Simple phone formatting (you can enhance this)
+            let value = this.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                if (value.length <= 3) {
+                    value = value;
+                } else if (value.length <= 6) {
+                    value = value.slice(0, 3) + '-' + value.slice(3);
+                } else {
+                    value = value.slice(0, 3) + '-' + value.slice(3, 6) + '-' + value.slice(6, 10);
+                }
+            }
+            this.value = value;
+        });
+    }
+});
+</script>
+{% endblock %}

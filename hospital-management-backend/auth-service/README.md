@@ -238,13 +238,60 @@ function isTokenValid(token) {
 
 | Method | Endpoint | Description | Auth Required |
 |--------|----------|-------------|---------------|
-| `POST` | `/register` | User registration | ❌ |
+| `POST` | `/register` | User registration with full profile | ❌ |
 | `POST` | `/login` | User login | ❌ |
 | `POST` | `/refresh` | Refresh access token | ❌ |
-| `GET` | `/profile` | Get user profile | ✅ |
-| `PUT` | `/profile` | Update user profile | ✅ |
+| `GET` | `/profile` | Get user profile with complete info | ✅ |
+| `PUT` | `/profile` | Update user profile (all fields) | ✅ |
 | `POST` | `/logout` | Logout user | ✅ |
 | `POST` | `/change-password` | Change password | ✅ |
+
+## 👤 Profile Management
+
+### Complete User Profile Support
+Auth Service now supports full user profile management with the following fields:
+
+**Basic Information:**
+- `firstName` - User's first name
+- `lastName` - User's last name
+- `phone` - Phone number (encrypted, Vietnamese format)
+- `dateOfBirth` - Date of birth (ISO date format)
+- `address` - Full address string
+- `avatarUrl` - Profile picture URL
+
+### Profile API Examples
+
+#### Register with Full Profile
+```json
+{
+  "username": "doctor123",
+  "email": "doctor@hospital.com",
+  "password": "SecurePass123!@#",
+  "role": "doctor",
+  "profile": {
+    "firstName": "Bác sĩ",
+    "lastName": "Nguyễn Văn A",
+    "phone": "0987654321",
+    "dateOfBirth": "1980-05-15",
+    "address": "123 Đường ABC, Phường XYZ, Quận 1, TP.HCM",
+    "avatarUrl": "https://hospital.com/avatars/doctor123.jpg"
+  }
+}
+```
+
+#### Update Profile
+```json
+{
+  "profile": {
+    "firstName": "Updated First",
+    "lastName": "Updated Last",
+    "phone": "0912345678",
+    "dateOfBirth": "1985-12-20",
+    "address": "New Address, District 3, HCMC",
+    "avatarUrl": "https://example.com/new-avatar.jpg"
+  }
+}
+```
 
 ### 👥 User Management Routes (`/api/users`) - Admin Only
 

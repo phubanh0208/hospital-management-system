@@ -1,0 +1,536 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Select Patient for Prescription{% endblock %}
+
+{% block extra_css %}
+<style>
+    .patient-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: white;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .patient-card:hover {
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .patient-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .patient-details h5 {
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    
+    .patient-meta {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .patient-meta .badge {
+        margin-right: 0.5rem;
+    }
+    
+    .select-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .select-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        color: white;
+    }
+    
+    .search-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+    }
+    
+    .search-form .form-control {
+        border: none;
+        border-radius: 25px;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+    
+    .search-form .btn {
+        border-radius: 25px;
+        padding: 0.75rem 2rem;
+        font-weight: 600;
+        border: 2px solid white;
+        background: transparent;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .search-form .btn:hover {
+        background: white;
+        color: #667eea;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #666;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        color: #ddd;
+    }
+    
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+    
+    .allergy-warning {
+        color: #dc3545;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .patient-id {
+        font-family: 'Courier New', monospace;
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    /* Live Search Styles */
+    .search-box {
+        position: relative;
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .search-result-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .search-result-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+
+    .search-result-item .patient-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .search-result-item .patient-info {
+        font-size: 0.85rem;
+        color: #666;
+        margin-top: 2px;
+    }
+
+    .search-filters {
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .filter-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: white;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        margin: 0.25rem;
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn:hover, .filter-btn.active {
+        background: white;
+        color: #667eea;
+        border-color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="mb-2">👥 Select Patient for Prescription</h1>
+        <p class="mb-0">Choose a patient to create a new prescription</p>
+    </div>
+
+    <!-- Search Section -->
+    <div class="search-section">
+        <h4 class="mb-3">🔍 Search Patients</h4>
+        <form method="get" class="search-form">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="search-box">
+                        <input type="text"
+                               class="form-control"
+                               name="search"
+                               value="{{ search_query }}"
+                               id="searchInput"
+                               placeholder="Search by name, phone, patient ID, or email..."
+                               autocomplete="off">
+                        <div id="searchResults" class="search-results"></div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Search Filters -->
+        <div class="search-filters">
+            <div class="d-flex flex-wrap align-items-center">
+                <span class="me-3">Quick Filters:</span>
+                <a href="?sort_by=fullName&sort_order=asc{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="filter-btn {% if sort_by == 'fullName' and sort_order == 'asc' %}active{% endif %}">
+                    <i class="fas fa-sort-alpha-down me-1"></i>Name A-Z
+                </a>
+                <a href="?sort_by=fullName&sort_order=desc{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="filter-btn {% if sort_by == 'fullName' and sort_order == 'desc' %}active{% endif %}">
+                    <i class="fas fa-sort-alpha-up me-1"></i>Name Z-A
+                </a>
+                <a href="?sort_by=age&sort_order=asc{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="filter-btn {% if sort_by == 'age' and sort_order == 'asc' %}active{% endif %}">
+                    <i class="fas fa-sort-numeric-down me-1"></i>Age ↑
+                </a>
+                <a href="?sort_by=age&sort_order=desc{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="filter-btn {% if sort_by == 'age' and sort_order == 'desc' %}active{% endif %}">
+                    <i class="fas fa-sort-numeric-up me-1"></i>Age ↓
+                </a>
+                <a href="?sort_by=createdAt&sort_order=desc{% if search_query %}&search={{ search_query }}{% endif %}"
+                   class="filter-btn {% if sort_by == 'createdAt' and sort_order == 'desc' %}active{% endif %}">
+                    <i class="fas fa-clock me-1"></i>Recent
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    {% if patients %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Found {{ total_count }} patient{{ total_count|pluralize }} 
+                {% if search_query %}matching "{{ search_query }}"{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Patients List -->
+    <div class="row">
+        <div class="col-12">
+            {% if error_message %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>{{ error_message }}
+                </div>
+            {% elif patients %}
+                {% for patient in patients %}
+                <div class="patient-card" onclick="selectPatient('{{ patient.id }}')">
+                    <div class="patient-info">
+                        <div class="patient-details">
+                            <h5>
+                                <i class="fas fa-user me-2 text-primary"></i>
+                                {{ patient.fullName }}
+                            </h5>
+                            <div class="patient-meta">
+                                <span class="patient-id">ID: {{ patient.id }}</span>
+                                
+                                {% if patient.calculated_age %}
+                                    <span class="badge bg-secondary">{{ patient.calculated_age }} years old</span>
+                                {% elif patient.age %}
+                                    <span class="badge bg-secondary">{{ patient.age }} years old</span>
+                                {% endif %}
+                                
+                                {% if patient.gender %}
+                                    <span class="badge bg-info">{{ patient.gender|title }}</span>
+                                {% endif %}
+                                
+                                <br>
+                                
+                                {% if patient.phone %}
+                                    <i class="fas fa-phone me-1"></i>{{ patient.phone }}
+                                {% endif %}
+                                
+                                {% if patient.email %}
+                                    <i class="fas fa-envelope me-1 ms-3"></i>{{ patient.email }}
+                                {% endif %}
+                                
+                                {% if patient.allergies %}
+                                    <br>
+                                    <div class="allergy-warning mt-2">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Allergies: {{ patient.allergies }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="patient-actions">
+                            <button type="button" class="btn select-btn" onclick="selectPatient('{{ patient.id }}')">
+                                <i class="fas fa-check me-2"></i>Select Patient
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Pagination -->
+                {% if pagination.totalPages > 1 %}
+                <div class="pagination-wrapper">
+                    <nav aria-label="Patient pagination">
+                        <ul class="pagination">
+                            {% if pagination.hasPrev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.currentPage|add:'-1' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i> Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for page_num in pagination.pages %}
+                                <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ page_num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+
+                            {% if pagination.hasNext %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ pagination.currentPage|add:'1' }}{% if search_query %}&search={{ search_query }}{% endif %}{% if sort_by %}&sort_by={{ sort_by }}{% endif %}{% if sort_order %}&sort_order={{ sort_order }}{% endif %}">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+
+                    <div class="text-center text-muted mt-2">
+                        Showing {{ patients|length }} of {{ total_count }} patients
+                        {% if search_query %} matching "{{ search_query }}"{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <h4>No Patients Found</h4>
+                    {% if search_query %}
+                        <p>No patients match your search criteria "{{ search_query }}".</p>
+                        <a href="{% url 'prescriptions:patient_selection' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-times me-2"></i>Clear Search
+                        </a>
+                    {% else %}
+                        <p>No patients are available in the system.</p>
+                        <a href="{% url 'patients:create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Add New Patient
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Prescriptions
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+// Patient selection function
+function selectPatient(patientId) {
+    // Add loading state
+    const button = event.target.closest('.select-btn');
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Selecting...';
+    }
+
+    // Redirect to prescription creation form with patient ID
+    window.location.href = "{% url 'prescriptions:create' %}?patient_id=" + patientId;
+}
+
+// Live search functionality
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+if (searchInput && searchResults) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/patients/api/search/?q=${encodeURIComponent(query)}&limit=8`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.length > 0) {
+                    let html = '';
+                    data.data.forEach(patient => {
+                        const age = patient.calculated_age || patient.age || 'Unknown';
+                        const phone = patient.phone || 'No phone';
+                        const allergies = patient.allergies ? `⚠️ Allergies: ${patient.allergies}` : '';
+
+                        html += `
+                            <div class="search-result-item" onclick="selectPatient('${patient.id}')">
+                                <div class="patient-name">${patient.fullName}</div>
+                                <div class="patient-info">
+                                    ID: ${patient.id} • Age: ${age} • ${phone}
+                                    ${allergies ? `<br><span class="text-danger">${allergies}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    searchResults.innerHTML = html;
+                    searchResults.style.display = 'block';
+                } else {
+                    searchResults.innerHTML = `
+                        <div class="search-result-item text-muted">
+                            <i class="fas fa-search me-2"></i>No patients found matching "${query}"
+                        </div>
+                    `;
+                    searchResults.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResults.style.display = 'none';
+            });
+        }, 300);
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    // Show search results when focusing on input (if has value)
+    searchInput.addEventListener('focus', function() {
+        if (this.value.trim().length >= 2) {
+            searchResults.style.display = 'block';
+        }
+    });
+}
+
+// Add keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        if (searchResults.style.display === 'block') {
+            searchResults.style.display = 'none';
+            searchInput.blur();
+        } else {
+            window.location.href = "{% url 'prescriptions:list' %}";
+        }
+    }
+
+    // Enter key to search
+    if (e.key === 'Enter' && document.activeElement === searchInput) {
+        e.preventDefault();
+        document.querySelector('.search-form').submit();
+    }
+});
+
+// Add click handlers for patient cards
+document.querySelectorAll('.patient-card').forEach(function(card) {
+    card.addEventListener('click', function(e) {
+        // Don't trigger if clicking on the button directly
+        if (!e.target.closest('.select-btn')) {
+            const patientId = this.onclick.toString().match(/'([^']+)'/)[1];
+            selectPatient(patientId);
+        }
+    });
+});
+
+// Add loading states for filter buttons
+document.querySelectorAll('.filter-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+        // Add loading state
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+
+        // Let the navigation proceed
+        setTimeout(() => {
+            this.innerHTML = originalText;
+        }, 100);
+    });
+});
+
+// Auto-focus search input on page load
+document.addEventListener('DOMContentLoaded', function() {
+    if (searchInput && !searchInput.value.trim()) {
+        searchInput.focus();
+    }
+});
+</script>
+{% endblock %}

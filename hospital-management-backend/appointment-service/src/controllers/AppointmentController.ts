@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AppointmentService } from '../services/AppointmentService';
-import { 
-  createSuccessResponse, 
+import {
+  createSuccessResponse,
   createErrorResponse,
   validateAppointment,
   logger
@@ -134,7 +134,7 @@ export class AppointmentController {
       const updateData = req.body;
 
       // Validate appointment data (partial validation for update)
-      const validationErrors = validateAppointment(updateData);
+      const validationErrors = validateAppointment(updateData, true);
       if (validationErrors.length > 0) {
         res.status(400).json(createErrorResponse('Validation failed', validationErrors));
         return;

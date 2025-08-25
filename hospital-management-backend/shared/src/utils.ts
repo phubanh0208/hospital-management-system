@@ -89,13 +89,39 @@ export const isValidEmail = (email: string): boolean => {
 };
 
 export const isValidPhone = (phone: string): boolean => {
-  const phoneRegex = /^(\+84|0)[3|5|7|8|9][0-9]{8}$/;
-  return phoneRegex.test(phone);
+  // Remove all non-digit characters except + for international format
+  const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
+
+  // Vietnam phone number patterns
+  const vietnamRegex = /^(\+84|0)[3|5|7|8|9][0-9]{8}$/;
+
+  // International phone number pattern (basic)
+  const internationalRegex = /^\+[1-9]\d{1,14}$/;
+
+  // US/Canada phone number pattern
+  const usRegex = /^(\+1)?[2-9]\d{2}[2-9]\d{2}\d{4}$/;
+
+  // Basic phone number pattern (10-15 digits)
+  const basicRegex = /^[0-9]{10,15}$/;
+
+  return vietnamRegex.test(cleanPhone) ||
+         internationalRegex.test(cleanPhone) ||
+         usRegex.test(cleanPhone) ||
+         basicRegex.test(cleanPhone);
 };
 
 export const isValidUUID = (uuid: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(uuid);
+};
+
+export const isValidUrl = (url: string): boolean => {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 // Sanitization utilities

@@ -1,0 +1,10 @@
+{
+  "profile": {
+    "firstName": "Nguyễn Văn",
+    "lastName": "An",
+    "phone": "0987654321",
+    "dateOfBirth": "1990-05-15",
+    "address": "123 Đường ABC, Phường XYZ, Quận 1, TP.HCM",
+    "avatarUrl": "https://example.com/avatar.jpg"
+  }
+}

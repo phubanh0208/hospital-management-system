@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 
 // Import routes
 import analyticsRoutes from './routes/analyticsRoutes';
+import eventRoutes from './routes/eventRoutes';
 import healthRoutes from './routes/healthRoutes';
 
 // Import database
@@ -36,6 +37,7 @@ if (process.env.NODE_ENV !== 'test') {
 // Routes
 app.use('/health', healthRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/events', eventRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -79,7 +81,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 // Start server
 const startServer = async () => {
   try {
-    // Test database connection
+        // Test database connection
     const dbConnected = await testConnection();
     if (!dbConnected) {
       console.error('❌ Failed to connect to database. Exiting...');

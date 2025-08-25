@@ -1,0 +1,442 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add New Patient - Hospital Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8f9fc;
+        border-left: 4px solid #4e73df;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .form-section h5 {
+        color: #4e73df;
+        margin-bottom: 1rem;
+    }
+    .required-field::after {
+        content: " *";
+        color: #e74a3b;
+    }
+    .form-control:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-user-plus text-primary"></i> Add New Patient
+        </h1>
+        <a href="{% url 'patients:list' %}" class="btn btn-secondary btn-sm">
+            <i class="fas fa-arrow-left"></i> Back to Patients
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Patient Information</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="patientForm">
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user"></i> Personal Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="fullName" class="form-label required-field">Full Name</label>
+                                    <input type="text" class="form-control" id="fullName" name="fullName" 
+                                           value="{{ form_data.fullName }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="dateOfBirth" class="form-label required-field">Date of Birth</label>
+                                    <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth" 
+                                           value="{{ form_data.dateOfBirth }}" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="gender" class="form-label required-field">Gender</label>
+                                    <select class="form-select" id="gender" name="gender" required>
+                                        <option value="">Select Gender</option>
+                                        <option value="male" {% if form_data.gender == 'male' %}selected{% endif %}>Male</option>
+                                        <option value="female" {% if form_data.gender == 'female' %}selected{% endif %}>Female</option>
+                                        <option value="other" {% if form_data.gender == 'other' %}selected{% endif %}>Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bloodType" class="form-label">Blood Type</label>
+                                    <select class="form-select" id="bloodType" name="bloodType">
+                                        <option value="">Select Blood Type</option>
+                                        <option value="A+" {% if form_data.bloodType == 'A+' %}selected{% endif %}>A+</option>
+                                        <option value="A-" {% if form_data.bloodType == 'A-' %}selected{% endif %}>A-</option>
+                                        <option value="B+" {% if form_data.bloodType == 'B+' %}selected{% endif %}>B+</option>
+                                        <option value="B-" {% if form_data.bloodType == 'B-' %}selected{% endif %}>B-</option>
+                                        <option value="AB+" {% if form_data.bloodType == 'AB+' %}selected{% endif %}>AB+</option>
+                                        <option value="AB-" {% if form_data.bloodType == 'AB-' %}selected{% endif %}>AB-</option>
+                                        <option value="O+" {% if form_data.bloodType == 'O+' %}selected{% endif %}>O+</option>
+                                        <option value="O-" {% if form_data.bloodType == 'O-' %}selected{% endif %}>O-</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-phone"></i> Contact Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label required-field">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           value="{{ form_data.phone }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="email" class="form-label" id="emailLabel">Email Address</label>
+                                    <input type="email" class="form-control" id="email" name="email"
+                                           value="{{ form_data.email }}">
+                                    <div class="form-text" id="emailHelp" style="display: none;">Required when creating patient account</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-map-marker-alt"></i> Address Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="street" class="form-label required-field">Street Address</label>
+                                    <input type="text" class="form-control" id="street" name="street" 
+                                           value="{{ form_data.street }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="ward" class="form-label required-field">Ward</label>
+                                    <input type="text" class="form-control" id="ward" name="ward" 
+                                           value="{{ form_data.ward }}" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="district" class="form-label required-field">District</label>
+                                    <input type="text" class="form-control" id="district" name="district" 
+                                           value="{{ form_data.district }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="city" class="form-label required-field">City</label>
+                                    <input type="text" class="form-control" id="city" name="city" 
+                                           value="{{ form_data.city }}" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="zipCode" class="form-label">Zip Code</label>
+                                    <input type="text" class="form-control" id="zipCode" name="zipCode" 
+                                           value="{{ form_data.zipCode }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Emergency Contact -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-exclamation-triangle"></i> Emergency Contact</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyName" class="form-label required-field">Contact Name</label>
+                                    <input type="text" class="form-control" id="emergencyName" name="emergencyName" 
+                                           value="{{ form_data.emergencyName }}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyPhone" class="form-label required-field">Contact Phone</label>
+                                    <input type="tel" class="form-control" id="emergencyPhone" name="emergencyPhone" 
+                                           value="{{ form_data.emergencyPhone }}" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyRelationship" class="form-label required-field">Relationship</label>
+                                    <input type="text" class="form-control" id="emergencyRelationship" name="emergencyRelationship" 
+                                           value="{{ form_data.emergencyRelationship }}" placeholder="e.g., Spouse, Parent, Sibling" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="emergencyAddress" class="form-label">Contact Address</label>
+                                    <input type="text" class="form-control" id="emergencyAddress" name="emergencyAddress" 
+                                           value="{{ form_data.emergencyAddress }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Medical Information -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-notes-medical"></i> Medical Information</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="allergies" class="form-label">Allergies</label>
+                                    <textarea class="form-control" id="allergies" name="allergies" rows="3"
+                                              placeholder="List any known allergies...">{{ form_data.allergies }}</textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="medicalHistory" class="form-label">Medical History</label>
+                                    <textarea class="form-control" id="medicalHistory" name="medicalHistory" rows="3"
+                                              placeholder="Brief medical history...">{{ form_data.medicalHistory }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Creation (Optional) -->
+                        <div class="form-section">
+                            <h5><i class="fas fa-user-plus"></i> Create Patient Account (Optional)</h5>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="createAccount" name="createAccount"
+                                           {% if form_data.createAccount %}checked{% endif %}>
+                                    <label class="form-check-label" for="createAccount">
+                                        <strong>Create login account for this patient</strong>
+                                        <br><small class="text-muted">Patient will be able to login and view their medical records, appointments, etc.</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="accountFields" style="display: none;">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Account Information:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li><strong>Email:</strong> Will use the email address entered above</li>
+                                        <li><strong>Name:</strong> Will use the full name entered above</li>
+                                        <li><strong>Phone:</strong> Will use the phone number entered above</li>
+                                        <li><strong>Role:</strong> Automatically set to "Patient"</li>
+                                    </ul>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="username" class="form-label required-field">Username</label>
+                                        <input type="text" class="form-control" id="username" name="username"
+                                               value="{{ form_data.username }}"
+                                               placeholder="Enter username for patient login">
+                                        <div class="form-text">Username must be unique and at least 3 characters long</div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="password" class="form-label required-field">Password</label>
+                                        <input type="password" class="form-control" id="password" name="password"
+                                               value="{{ form_data.password }}"
+                                               placeholder="Enter password for patient">
+                                        <div class="form-text">Password must be at least 8 characters with uppercase, lowercase, digit, and special character</div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="confirmPassword" class="form-label required-field">Confirm Password</label>
+                                        <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"
+                                               placeholder="Confirm password">
+                                        <div class="invalid-feedback" id="passwordMismatch">
+                                            Passwords do not match
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="mt-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="sendCredentials" name="sendCredentials"
+                                                       {% if form_data.sendCredentials %}checked{% endif %}>
+                                                <label class="form-check-label" for="sendCredentials">
+                                                    Send login credentials to patient's email
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'patients:list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="fas fa-save"></i> Create Patient
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Account creation toggle
+document.getElementById('createAccount').addEventListener('change', function() {
+    const accountFields = document.getElementById('accountFields');
+    const usernameField = document.getElementById('username');
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirmPassword');
+    const emailField = document.getElementById('email');
+    const emailLabel = document.getElementById('emailLabel');
+    const emailHelp = document.getElementById('emailHelp');
+
+    if (this.checked) {
+        accountFields.style.display = 'block';
+        usernameField.required = true;
+        passwordField.required = true;
+        confirmPasswordField.required = true;
+        emailField.required = true;
+
+        // Update email label to show required
+        emailLabel.innerHTML = 'Email Address <span class="text-danger">*</span>';
+        emailHelp.style.display = 'block';
+
+        // Auto-generate username suggestion from full name
+        const fullName = document.getElementById('fullName').value;
+        if (fullName && !usernameField.value) {
+            const suggestion = fullName.toLowerCase()
+                .replace(/[^a-z0-9]/g, '')
+                .substring(0, 15);
+            if (suggestion.length >= 3) {
+                usernameField.value = suggestion;
+            }
+        }
+    } else {
+        accountFields.style.display = 'none';
+        usernameField.required = false;
+        passwordField.required = false;
+        confirmPasswordField.required = false;
+        emailField.required = false;
+
+        // Update email label to show optional
+        emailLabel.innerHTML = 'Email Address';
+        emailHelp.style.display = 'none';
+    }
+});
+
+// Password confirmation validation
+document.getElementById('confirmPassword').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+
+    if (password && confirmPassword) {
+        if (password === confirmPassword) {
+            this.setCustomValidity('');
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+            document.getElementById('passwordMismatch').style.display = 'none';
+        } else {
+            this.setCustomValidity('Passwords do not match');
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+            document.getElementById('passwordMismatch').style.display = 'block';
+        }
+    }
+});
+
+// Password validation
+document.getElementById('password').addEventListener('input', function() {
+    const password = this.value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    // Validate password strength
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasDigit = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*]/.test(password);
+    const hasLength = password.length >= 8;
+
+    if (password && (!hasUpper || !hasLower || !hasDigit || !hasSpecial || !hasLength)) {
+        this.setCustomValidity('Password must contain at least 8 characters with uppercase, lowercase, digit, and special character');
+        this.classList.add('is-invalid');
+    } else {
+        this.setCustomValidity('');
+        this.classList.remove('is-invalid');
+        if (password) this.classList.add('is-valid');
+    }
+
+    // Re-validate confirm password
+    if (confirmPassword) {
+        document.getElementById('confirmPassword').dispatchEvent(new Event('input'));
+    }
+});
+
+// Form submission with validation
+document.getElementById('patientForm').addEventListener('submit', function(e) {
+    const createAccount = document.getElementById('createAccount').checked;
+
+    if (createAccount) {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const email = document.getElementById('email').value;
+
+        // Validate required fields for account creation
+        if (!username || username.length < 3) {
+            e.preventDefault();
+            alert('Username is required and must be at least 3 characters long');
+            return;
+        }
+
+        if (!password || password.length < 8) {
+            e.preventDefault();
+            alert('Password is required and must be at least 8 characters long');
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            alert('Passwords do not match');
+            return;
+        }
+
+        if (!email) {
+            e.preventDefault();
+            alert('Email address is required when creating an account');
+            document.getElementById('email').focus();
+            return;
+        }
+    }
+
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+});
+
+// Auto-format phone numbers
+document.getElementById('phone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.startsWith('84')) {
+        value = '+' + value;
+    } else if (value.startsWith('0')) {
+        // Vietnamese mobile number
+    } else if (value.length >= 10) {
+        // International format
+        value = '+' + value;
+    }
+    e.target.value = value;
+});
+
+document.getElementById('emergencyPhone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.startsWith('84')) {
+        value = '+' + value;
+    } else if (value.startsWith('0')) {
+        // Vietnamese mobile number
+    } else if (value.length >= 10) {
+        // International format
+        value = '+' + value;
+    }
+    e.target.value = value;
+});
+
+// Set max date for date of birth (today)
+document.getElementById('dateOfBirth').max = new Date().toISOString().split('T')[0];
+</script>
+{% endblock %}

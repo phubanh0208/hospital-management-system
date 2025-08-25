@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}Login - {{ hospital_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+    }
+    
+    .login-container {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .login-card {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .login-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .login-body {
+        padding: 2rem;
+    }
+    
+    .form-control-lg {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control-lg:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .hospital-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.9;
+    }
+    
+    .login-footer {
+        text-align: center;
+        padding: 1rem 2rem 2rem;
+        color: #6c757d;
+    }
+    
+    .floating-shapes {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: -1;
+    }
+    
+    .shape {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+    }
+    
+    .shape:nth-child(1) {
+        width: 80px;
+        height: 80px;
+        top: 10%;
+        left: 10%;
+        animation-delay: 0s;
+    }
+    
+    .shape:nth-child(2) {
+        width: 120px;
+        height: 120px;
+        top: 70%;
+        left: 80%;
+        animation-delay: 2s;
+    }
+    
+    .shape:nth-child(3) {
+        width: 60px;
+        height: 60px;
+        top: 40%;
+        left: 90%;
+        animation-delay: 4s;
+    }
+    
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-20px); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="floating-shapes">
+    <div class="shape"></div>
+    <div class="shape"></div>
+    <div class="shape"></div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center align-items-center min-vh-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="login-container">
+                <div class="login-card">
+                    <div class="login-header">
+                        <i class="fas fa-hospital-alt hospital-icon"></i>
+                        <h3 class="mb-0">{{ hospital_name }}</h3>
+                        <p class="mb-0 mt-2 opacity-75">Hospital Management System</p>
+                    </div>
+                    
+                    <div class="login-body">
+                        <form method="post" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.username.id_for_label }}" class="form-label">
+                                    <i class="fas fa-user me-2"></i>Username
+                                </label>
+                                {{ form.username }}
+                                <div class="invalid-feedback">
+                                    Please enter your username.
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.password.id_for_label }}" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Password
+                                </label>
+                                {{ form.password }}
+                                <div class="invalid-feedback">
+                                    Please enter your password.
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                {{ form.remember_me }}
+                                <label class="form-check-label" for="{{ form.remember_me.id_for_label }}">
+                                    Remember me
+                                </label>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                                </button>
+                            </div>
+
+                            <div class="text-center mt-3">
+                                <a href="{% url 'authentication:forgot_password' %}" class="text-decoration-none">
+                                    <i class="fas fa-key me-1"></i>Forgot your password?
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="login-footer">
+                        <small>
+                            <i class="fas fa-shield-alt me-1"></i>
+                            Secure login protected by enterprise security
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Demo Credentials -->
+                <div class="mt-4 text-center">
+                    <div class="card bg-dark text-white">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-info-circle me-2"></i>Demo Credentials
+                            </h6>
+                            <div class="row text-start">
+                                <div class="col-6">
+                                    <small>
+                                        <strong>Admin:</strong><br>
+                                        Username: admin<br>
+                                        Password: Admin123!@#
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <small>
+                                        <strong>Doctor:</strong><br>
+                                        Username: doctor1<br>
+                                        Password: Doctor123!@#
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Register Link -->
+                    <div class="text-center mt-4">
+                        <p class="text-muted">
+                            Don't have an account?
+                            <a href="{% url 'authentication:register' %}" class="text-primary text-decoration-none">
+                                <i class="fas fa-user-plus me-1"></i>Register here
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// Auto-fill demo credentials
+function fillCredentials(username, password) {
+    document.getElementById('id_username').value = username;
+    document.getElementById('id_password').value = password;
+}
+
+// Add click handlers for demo credentials
+document.addEventListener('DOMContentLoaded', function() {
+    // You can add click handlers here if needed
+});
+</script>
+{% endblock %}

@@ -20,7 +20,11 @@ router.delete('/:id', patientController.deletePatient);
 router.get('/:id/medical-history', patientController.getMedicalHistory);
 router.post('/:id/medical-history', patientController.addMedicalHistory);
 
-// Visit summary route
+// Visit summary routes
 router.get('/:id/visit-summary', patientController.getVisitSummary);
+router.post('/:id/update-visit-summary', patientController.updateVisitSummary);
+
+// Bulk update route
+router.post('/update-all-visit-summaries', patientController.updateAllVisitSummaries);
 
 export default router;

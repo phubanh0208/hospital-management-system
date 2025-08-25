@@ -20,8 +20,13 @@ export const createPostgreSQLPool = (config: DatabaseConfig): Pool => {
     user: config.username,
     password: config.password,
     max: 20,
+    min: 2,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000,
+    statement_timeout: 10000,
+    query_timeout: 10000,
+    // Ensure UTF-8 encoding
+    options: '--client_encoding=UTF8',
   });
 
   pool.on('error', (err) => {
@@ -69,9 +74,9 @@ export const getDatabaseConfig = (serviceName: string): DatabaseConfig => {
     auth: {
       host: process.env.AUTH_DB_HOST || 'localhost',
       port: parseInt(process.env.AUTH_DB_PORT || '5432'),
-      database: process.env.AUTH_DB_NAME || 'auth_db',
+      database: process.env.AUTH_DB_NAME || 'auth_service_db',
       username: process.env.AUTH_DB_USER || 'auth_user',
-      password: process.env.AUTH_DB_PASSWORD || 'auth_password'
+      password: process.env.AUTH_DB_PASSWORD || 'auth_password_123'
     },
     patient: {
       host: process.env.PATIENT_DB_HOST || 'localhost',

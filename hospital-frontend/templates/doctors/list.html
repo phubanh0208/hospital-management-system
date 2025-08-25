@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctors - Hospital Management{% endblock %}
+
+{% block extra_css %}
+<style>
+.doctor-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    border: 1px solid #e3e6f0;
+    border-radius: 0.35rem;
+    background: white;
+}
+
+.doctor-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.doctor-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #4e73df, #224abe);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.availability-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.available { background-color: #1cc88a; }
+.busy { background-color: #f6c23e; }
+.unavailable { background-color: #e74a3b; }
+
+.search-box {
+    position: relative;
+}
+.search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-top: none;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+}
+.search-result-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+.search-result-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <div class="d-flex align-items-center">
+            <h1 class="h3 mb-0 text-gray-800 me-3">
+                <i class="fas fa-user-md text-primary"></i> Doctors Management
+            </h1>
+            {% if request.session.user_role %}
+            <span class="badge bg-{% if request.session.user_role == 'admin' %}danger{% elif request.session.user_role == 'doctor' %}success{% elif request.session.user_role == 'staff' %}warning{% else %}secondary{% endif %}">
+                {{ request.session.user_role|title }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addDoctorModal">
+                <i class="fas fa-plus"></i> Add New Doctor
+            </button>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="search-box">
+                        <form method="GET" class="d-flex">
+                            <input type="text" name="search" class="form-control"
+                                   placeholder="Search by name, email, specialization..."
+                                   value="{{ search }}" id="searchInput">
+                            <button type="submit" class="btn btn-outline-primary ms-2">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </form>
+                        <div id="searchResults" class="search-results"></div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="specializationFilter">
+                        <option value="">All Specializations</option>
+                        <!-- Specializations will be loaded dynamically from API -->
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Doctors Grid -->
+    <div class="row" id="doctorsGrid">
+        {% for doctor in doctors %}
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="doctor-card p-4 h-100">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="doctor-avatar me-3">
+                        {{ doctor.fullName|default:doctor.username|first|upper }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">
+                            <a href="{% url 'doctors:detail' doctor.userId %}" class="text-decoration-none">
+                                {{ doctor.fullName|default:doctor.username }}
+                            </a>
+                        </h5>
+                        <p class="text-muted mb-0">{{ doctor.username }}</p>
+                        {% if doctor.yearsOfExperience %}
+                        <small class="text-muted">{{ doctor.yearsOfExperience }} years experience</small>
+                        {% endif %}
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-muted" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'doctors:detail' doctor.userId %}">
+                                <i class="fas fa-eye"></i> View Details
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'doctors:schedule' doctor.userId %}">
+                                <i class="fas fa-calendar"></i> View Schedule
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'appointments:book' %}?doctor={{ doctor.userId }}">
+                                <i class="fas fa-calendar-plus"></i> Book Appointment
+                            </a></li>
+                            {% if request.session.user_role == 'admin' %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deactivateDoctor('{{ doctor.userId }}')">
+                                <i class="fas fa-user-slash"></i> Deactivate
+                            </a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="row text-center mb-3">
+                    <div class="col-6">
+                        <div class="text-primary">
+                            <i class="fas fa-stethoscope fa-2x mb-1"></i>
+                            <div class="small">Specialization</div>
+                            <div class="font-weight-bold">{{ doctor.specialization|default:"General Medicine" }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-success">
+                            <i class="fas fa-calendar-check fa-2x mb-1"></i>
+                            <div class="small">Appointments</div>
+                            <div class="font-weight-bold">{{ doctor.appointment_count|default:0 }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        {% if doctor.isAcceptingPatients %}
+                            <span class="badge bg-success status-badge">Accepting Patients</span>
+                        {% else %}
+                            <span class="badge bg-secondary status-badge">Not Accepting</span>
+                        {% endif %}
+                        {% if doctor.consultationFee %}
+                            <span class="badge bg-info status-badge ms-1">${{ doctor.consultationFee }}</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        {% if doctor.isAcceptingPatients %}
+                            <span class="availability-indicator available"></span>
+                            <small class="text-muted">Available</small>
+                        {% else %}
+                            <span class="availability-indicator unavailable"></span>
+                            <small class="text-muted">Unavailable</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-user-md fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No Doctors Found</h4>
+                <p class="text-muted">No doctors match your search criteria.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.totalPages > 1 %}
+    <div class="d-flex justify-content-center">
+        <nav aria-label="Doctors pagination">
+            <ul class="pagination">
+                {% if pagination.page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.page|add:'-1' }}{% if search %}&search={{ search }}{% endif %}{% if specialization %}&specialization={{ specialization }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Previous</a>
+                    </li>
+                {% endif %}
+
+                {% for page_num in pagination.pages %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}{% if specialization %}&specialization={{ specialization }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ page_num }}</a>
+                    </li>
+                {% endfor %}
+
+                {% if pagination.page < pagination.totalPages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ pagination.page|add:'1' }}{% if search %}&search={{ search }}{% endif %}{% if specialization %}&specialization={{ specialization }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    <!-- Info note for non-admin users -->
+    {% if request.session.user_role != 'admin' %}
+    <div class="text-center text-muted mt-3">
+        <small><i class="fas fa-info-circle"></i> Doctor deactivation is restricted to administrators only</small>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Doctor Modal -->
+<div class="modal fade" id="addDoctorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Doctor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">To add a new doctor, please use the User Management system to create a new user account with the "doctor" role.</p>
+                <div class="d-grid">
+                    <a href="/users/create/" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Go to User Management
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% csrf_token %}
+<script>
+// Live search functionality with CSRF support
+console.log('Doctors page loaded - live search enabled');
+
+// Function to get CSRF token
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+           getCookie('csrftoken');
+}
+
+// Function to get cookie value
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Load specializations - simplified approach
+function loadSpecializations() {
+    console.log('Loading static specializations...');
+
+    const specializationSelect = document.getElementById('specializationFilter');
+    const currentValue = specializationSelect.value;
+
+    // Use static specializations for reliability
+    specializationSelect.innerHTML = `
+        <option value="">All Specializations</option>
+        <option value="Cardiology">Cardiology</option>
+        <option value="Neurology">Neurology</option>
+        <option value="Orthopedics">Orthopedics</option>
+        <option value="Pediatrics">Pediatrics</option>
+        <option value="General Medicine">General Medicine</option>
+    `;
+
+    // Restore selected value
+    if (currentValue) {
+        specializationSelect.value = currentValue;
+    }
+
+    console.log('Specializations loaded successfully');
+}
+
+// Live search functionality with debug logging
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+const searchResults = document.getElementById('searchResults');
+
+console.log('Live search elements:', { searchInput, searchResults });
+
+// Check if user is authenticated by checking if we're on the actual page (not redirected)
+const isAuthenticated = !window.location.pathname.includes('/auth/login');
+console.log('User authenticated:', isAuthenticated);
+
+if (searchInput && searchResults) {
+    if (!isAuthenticated) {
+        console.log('User not authenticated - live search disabled');
+        searchInput.placeholder = "Search doctors... (Login required for live search)";
+    } else {
+        console.log('Setting up live search event listener');
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        console.log('Search input changed:', query);
+
+        if (query.length < 2) {
+            searchResults.style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            console.log('Performing search for:', query);
+
+            fetch(`/doctors/api/search/?q=${encodeURIComponent(query)}&limit=5`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                console.log('Search response status:', response.status);
+                console.log('Search response headers:', response.headers);
+
+                if (response.status === 302) {
+                    throw new Error('Authentication required - redirected to login');
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                console.log('Search response data:', data);
+
+                if (data.doctors && data.doctors.length > 0) {
+                    let html = '';
+                    data.doctors.forEach(doctor => {
+                        const displayName = doctor.name || doctor.username;
+                        const specialization = doctor.specialization || 'General Medicine';
+                        html += `
+                            <div class="search-result-item" onclick="window.location.href='/doctors/${doctor.userId}/'">
+                                <strong>${displayName}</strong> (${doctor.username})
+                                <br><small class="text-muted">${specialization}</small>
+                            </div>
+                        `;
+                    });
+                    searchResults.innerHTML = html;
+                    searchResults.style.display = 'block';
+                    console.log('Search results displayed');
+                } else {
+                    searchResults.innerHTML = '<div class="search-result-item text-muted">No doctors found</div>';
+                    searchResults.style.display = 'block';
+                    console.log('No doctors found');
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+
+                if (error.message.includes('Authentication required')) {
+                    searchResults.innerHTML = '<div class="search-result-item text-info"><i class="fas fa-info-circle"></i> Please login to use live search</div>';
+                    searchResults.style.display = 'block';
+
+                    // Disable further search attempts
+                    searchInput.removeEventListener('input', arguments.callee);
+                    searchInput.placeholder = "Search doctors... (Press Enter to search)";
+                } else {
+                    searchResults.innerHTML = '<div class="search-result-item text-danger"><i class="fas fa-exclamation-circle"></i> Search error</div>';
+                    searchResults.style.display = 'block';
+                }
+            });
+        }, 300);
+    });
+
+    // Hide search results when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+        console.log('Live search setup complete');
+    }
+} else {
+    console.error('Live search elements not found');
+}
+
+// Form search is handled by the form submission automatically
+
+// Specialization filter
+document.getElementById('specializationFilter').addEventListener('change', function() {
+    console.log('Specialization changed to:', this.value);
+    performSearch();
+});
+
+// Status filter
+document.getElementById('statusFilter').addEventListener('change', function() {
+    console.log('Status changed to:', this.value);
+    performSearch();
+});
+
+// Perform search with all filters - simplified
+function performSearch() {
+    const search = document.getElementById('searchInput').value.trim();
+    const specialization = document.getElementById('specializationFilter').value;
+    const status = document.getElementById('statusFilter').value;
+
+    const url = new URL(window.location);
+
+    // Set search parameters
+    if (search) {
+        url.searchParams.set('search', search);
+    } else {
+        url.searchParams.delete('search');
+    }
+
+    if (specialization) {
+        url.searchParams.set('specialization', specialization);
+    } else {
+        url.searchParams.delete('specialization');
+    }
+
+    if (status) {
+        url.searchParams.set('status', status);
+    } else {
+        url.searchParams.delete('status');
+    }
+
+    // Reset to page 1 when searching
+    url.searchParams.set('page', '1');
+
+    // Hide search results dropdown
+    if (searchResults) {
+        searchResults.style.display = 'none';
+    }
+
+    window.location.href = url.toString();
+}
+
+// Deactivate doctor function
+function deactivateDoctor(doctorId) {
+    // Double-check admin role on client side (security is handled on server side)
+    const userRole = '{{ request.session.user_role }}';
+    if (userRole !== 'admin') {
+        alert('Only administrators can deactivate doctors.');
+        return;
+    }
+
+    if (confirm('Are you sure you want to deactivate this doctor? This action will prevent them from accepting new appointments.')) {
+        // Call Django API to deactivate doctor
+        fetch(`/doctors/${doctorId}/deactivate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'reason=Deactivated by administrator'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Doctor deactivated successfully');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to deactivate doctor. Please try again.');
+        });
+    }
+}
+
+// API connectivity test removed - not needed for Django API
+
+// Initialize page - simplified like patients
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing doctors page...');
+
+    // Get URL parameters first
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSearch = urlParams.get('search');
+    const currentSpecialization = urlParams.get('specialization');
+    const currentStatus = urlParams.get('status');
+
+    // Set search input value
+    if (currentSearch) {
+        document.getElementById('searchInput').value = currentSearch;
+    }
+
+    // Set status filter value
+    if (currentStatus) {
+        document.getElementById('statusFilter').value = currentStatus;
+    }
+
+    // Load specializations
+    loadSpecializations();
+
+    // Set specialization filter value after loading options
+    if (currentSpecialization) {
+        const specializationSelect = document.getElementById('specializationFilter');
+        specializationSelect.value = currentSpecialization;
+
+        // If value didn't set (option doesn't exist), try to find case-insensitive match
+        if (!specializationSelect.value && currentSpecialization) {
+            const options = Array.from(specializationSelect.options);
+            const matchingOption = options.find(option =>
+                option.value.toLowerCase() === currentSpecialization.toLowerCase()
+            );
+            if (matchingOption) {
+                specializationSelect.value = matchingOption.value;
+            }
+        }
+    }
+
+    console.log('Page initialization complete');
+});
+</script>
+{% endblock %}

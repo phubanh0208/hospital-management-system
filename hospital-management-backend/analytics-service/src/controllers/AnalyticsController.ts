@@ -239,5 +239,170 @@ export class AnalyticsController {
       });
     }
   };
+
+  /**
+   * Get doctor-specific dashboard
+   * GET /api/analytics/dashboard/doctor/:doctorId
+   */
+  getDoctorDashboard = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { doctorId } = req.params;
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+
+      if (!doctorId) {
+        res.status(400).json({
+          success: false,
+          message: 'Doctor ID is required',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      const dashboard = await this.analyticsService.getDoctorDashboard(doctorId, days);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          dashboard: dashboard,
+          period: `${days} days`,
+          doctor_id: doctorId,
+          generated_at: new Date().toISOString()
+        },
+        message: 'Doctor dashboard retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in getDoctorDashboard:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve doctor dashboard',
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  /**
+   * Get admin-specific dashboard
+   * GET /api/analytics/dashboard/admin
+   */
+  getAdminDashboard = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+
+      const dashboard = await this.analyticsService.getAdminDashboard(days);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          dashboard: dashboard,
+          period: `${days} days`,
+          generated_at: new Date().toISOString()
+        },
+        message: 'Admin dashboard retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in getAdminDashboard:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve admin dashboard',
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  /**
+   * Get doctor's patients analytics
+   * GET /api/analytics/doctors/:doctorId/patients
+   */
+  getDoctorPatients = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { doctorId } = req.params;
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+
+      if (!doctorId) {
+        res.status(400).json({
+          success: false,
+          message: 'Doctor ID is required',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      const patients = await this.analyticsService.getDoctorPatients(doctorId, days);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          patients: patients,
+          period: `${days} days`,
+          doctor_id: doctorId,
+          summary: {
+            total_patients: patients.length,
+            total_appointments: patients.reduce((sum: number, p: any) => sum + p.appointment_count, 0),
+            avg_appointments_per_patient: patients.length > 0 ?
+              Math.round(patients.reduce((sum: number, p: any) => sum + p.appointment_count, 0) / patients.length * 100) / 100 : 0
+          }
+        },
+        message: 'Doctor patients analytics retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in getDoctorPatients:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve doctor patients analytics',
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
+
+  /**
+   * Get doctor appointment trends
+   * GET /api/analytics/doctors/:doctorId/appointments/trends
+   */
+  getDoctorAppointmentTrends = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { doctorId } = req.params;
+      const days = req.query.days ? parseInt(req.query.days as string) : 30;
+
+      if (!doctorId) {
+        res.status(400).json({
+          success: false,
+          message: 'Doctor ID is required',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+
+      const trends = await this.analyticsService.getDoctorAppointmentTrends(doctorId, days);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          trends: trends,
+          period: `${days} days`,
+          doctor_id: doctorId,
+          summary: {
+            total_days: trends.length,
+            total_appointments: trends.reduce((sum: number, t: any) => sum + t.appointment_count, 0),
+            avg_per_day: trends.length > 0 ?
+              Math.round(trends.reduce((sum: number, t: any) => sum + t.appointment_count, 0) / trends.length * 100) / 100 : 0,
+            peak_day: trends.length > 0 ?
+              trends.reduce((max: any, t: any) => t.appointment_count > max.appointment_count ? t : max) : null
+          }
+        },
+        message: 'Doctor appointment trends retrieved successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error in getDoctorAppointmentTrends:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve doctor appointment trends',
+        timestamp: new Date().toISOString()
+      });
+    }
+  };
 }
 
