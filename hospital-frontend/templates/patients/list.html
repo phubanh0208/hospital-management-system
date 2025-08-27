@@ -7,17 +7,23 @@
 <style>
     .patient-card {
         transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid #e3e6f0;
+        border: 1px solid var(--border-default);
+        background: var(--surface-card);
+        border-radius: 8px;
+        box-shadow: var(--shadow-sm);
+        position: relative;
+        z-index: 1;
     }
     .patient-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-lg);
+        z-index: 2;
     }
     .patient-avatar {
         width: 50px;
         height: 50px;
         border-radius: 50%;
-        background: linear-gradient(45deg, #4e73df, #36b9cc);
+        background: linear-gradient(45deg, var(--brand-primary), var(--brand-secondary));
         display: flex;
         align-items: center;
         justify-content: center;
@@ -33,21 +39,27 @@
         top: 100%;
         left: 0;
         right: 0;
-        background: white;
-        border: 1px solid #ddd;
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
         border-top: none;
         max-height: 300px;
         overflow-y: auto;
-        z-index: 1000;
+        z-index: 1050;
         display: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: var(--shadow-md);
     }
     .search-result-item {
         padding: 10px;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid var(--border-default);
         cursor: pointer;
+        transition: background-color 0.2s;
     }
     .search-result-item:hover {
-        background-color: #f8f9fa;
+        background-color: var(--surface-page);
+    }
+    .search-result-item:last-child {
+        border-bottom: none;
     }
 </style>
 {% endblock %}
@@ -110,9 +122,9 @@
 
     <!-- Patients Grid -->
     {% if patients %}
-        <div class="row">
+        <div class="row g-4">
             {% for patient in patients %}
-            <div class="col-xl-4 col-md-6 mb-4">
+            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
                 <div class="card patient-card h-100">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
@@ -198,7 +210,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    <div class="card-footer bg-light">
+                    <div class="card-footer" style="background: var(--surface-page); border-top: 1px solid var(--border-default);">
                         <small class="text-muted">
                             <i class="fas fa-clock"></i>
                             Created {{ patient.createdAt|date:"M d, Y" }}

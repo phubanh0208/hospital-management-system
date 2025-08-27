@@ -6,13 +6,13 @@
 {% block extra_css %}
 <style>
     .form-section {
-        background: #f8f9fc;
-        border-left: 4px solid #4e73df;
+        background: var(--surface-page);
+        border-left: 4px solid var(--brand-primary);
         padding: 1rem;
         margin-bottom: 1.5rem;
     }
     .form-section h5 {
-        color: #4e73df;
+        color: var(--brand-primary);
         margin-bottom: 1rem;
     }
     .required-field::after {
@@ -20,8 +20,8 @@
         color: #e74a3b;
     }
     .form-control:focus {
-        border-color: #4e73df;
-        box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+        border-color: var(--brand-primary);
+        box-shadow: 0 0 0 0.2rem rgba(108, 92, 231, 0.25);
     }
 </style>
 {% endblock %}

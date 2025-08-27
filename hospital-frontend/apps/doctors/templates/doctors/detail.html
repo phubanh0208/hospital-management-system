@@ -6,77 +6,287 @@
 {% block extra_css %}
 <style>
     .doctor-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
         color: white;
-        padding: 2rem;
-        border-radius: 10px;
+        padding: 2.5rem;
+        border-radius: 16px;
         margin-bottom: 2rem;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .doctor-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+        pointer-events: none;
     }
     
     .doctor-avatar {
-        width: 120px;
-        height: 120px;
+        width: 140px;
+        height: 140px;
         border-radius: 50%;
-        border: 4px solid rgba(255,255,255,0.3);
+        border: 5px solid rgba(255,255,255,0.4);
         object-fit: cover;
+        box-shadow: var(--shadow-md);
+        transition: transform 0.3s ease;
+    }
+    
+    .doctor-avatar:hover {
+        transform: scale(1.05);
     }
     
     .info-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        background: var(--surface-card);
+        border-radius: 12px;
+        padding: 1.75rem;
+        box-shadow: var(--shadow-md);
         margin-bottom: 1.5rem;
+        border: 1px solid var(--border-default);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
     }
     
     .info-card h5 {
-        color: #333;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #e9ecef;
+        color: var(--text-primary);
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid var(--brand-primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .info-card h5 i {
+        color: var(--brand-primary);
+        font-size: 1.1em;
     }
     
     .availability-slot {
-        background: #e8f5e8;
-        border: 1px solid #28a745;
-        border-radius: 5px;
-        padding: 0.5rem;
+        background: linear-gradient(135deg, var(--brand-success) 0%, #20c997 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
         margin: 0.25rem;
         display: inline-block;
         font-size: 0.9rem;
+        font-weight: 500;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s ease;
+    }
+    
+    .availability-slot:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
     }
     
     .schedule-item {
-        background: #f8f9fa;
-        border-left: 4px solid #007bff;
-        padding: 1rem;
-        margin-bottom: 0.5rem;
-        border-radius: 0 5px 5px 0;
+        background: var(--surface-page);
+        border-left: 4px solid var(--brand-primary);
+        padding: 1.25rem;
+        margin-bottom: 0.75rem;
+        border-radius: 0 8px 8px 0;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border-default);
     }
-
+    
+    .schedule-item:hover {
+        background: var(--surface-card);
+        box-shadow: var(--shadow-sm);
+    }
+    
     .bg-light-success {
-        background-color: #d4edda !important;
-    }
-
-    .text-dark {
-        color: #343a40 !important;
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(32, 201, 151, 0.1) 100%) !important;
+        border: 1px solid rgba(40, 167, 69, 0.2);
     }
     
     .performance-metric {
         text-align: center;
-        padding: 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, var(--surface-card) 0%, var(--surface-page) 100%);
+        border-radius: 12px;
         margin-bottom: 1rem;
+        border: 1px solid var(--border-default);
+        transition: transform 0.2s ease;
+    }
+    
+    .performance-metric:hover {
+        transform: translateY(-2px);
     }
     
     .performance-metric h4 {
-        color: #007bff;
+        color: var(--brand-primary);
         margin-bottom: 0.5rem;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .performance-metric small {
+        color: var(--text-secondary);
+        font-weight: 500;
     }
     
     .btn-action {
         margin: 0.25rem;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    .table-borderless td {
+        padding: 0.75rem 0;
+        border: none;
+        color: var(--text-secondary);
+    }
+    
+    .table-borderless strong {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+    
+    .badge {
+        border-radius: 6px;
+        font-weight: 500;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .schedule-day {
+        background: var(--surface-page);
+        border: 1px solid var(--border-default);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+    }
+    
+    .schedule-day:hover {
+        background: var(--surface-card);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .schedule-day.available {
+        border-left: 4px solid var(--brand-success);
+    }
+    
+    .schedule-day.unavailable {
+        border-left: 4px solid var(--text-muted);
+        opacity: 0.7;
+    }
+    
+    /* Weekly Schedule Styles */
+    .weekly-schedule {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .schedule-item {
+        background: var(--surface-card);
+        border: 1px solid var(--border-default);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .schedule-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .schedule-item.available {
+        border-left: 4px solid var(--brand-success);
+    }
+    
+    .schedule-item.unavailable {
+        border-left: 4px solid var(--text-muted);
+        opacity: 0.8;
+    }
+    
+    .schedule-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .day-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .day-name {
+        color: var(--text-primary);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .day-status {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .day-status i {
+        margin-right: 0.5rem;
+    }
+    
+    .time-display {
+        display: flex;
+        align-items: center;
+    }
+    
+    .time-badge {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .time-badge.working {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+    }
+    
+    .time-badge.closed {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+    }
+    
+    .time-badge i {
+        font-size: 0.85rem;
+    }
+    
+    .time-text {
+        color: white;
+        font-weight: 600;
     }
 </style>
 {% endblock %}
@@ -110,27 +320,33 @@
                 {% endif %}
             </div>
             <div class="col-md-8">
-                <h2 class="mb-2 text-dark">{{ doctor.fullName }}</h2>
-                <p class="mb-1 text-dark"><i class="fas fa-stethoscope text-primary"></i> {{ doctor.specialization }}</p>
-                <p class="mb-1 text-dark">
-                    <i class="fas fa-envelope text-primary"></i>
+                <h2 class="mb-3" style="color: white; font-weight: 700; font-size: 2.5rem;">{{ doctor.fullName }}</h2>
+                <p class="mb-2" style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    <i class="fas fa-stethoscope" style="color: rgba(255,255,255,0.8);"></i> 
+                    {{ doctor.specialization }}
+                </p>
+                <p class="mb-2" style="color: rgba(255,255,255,0.9);">
+                    <i class="fas fa-envelope" style="color: rgba(255,255,255,0.8);"></i>
                     {% if doctor.email %}
                         {{ doctor.email }}
                     {% else %}
-                        <span class="text-muted">Private information</span>
+                        <span style="color: rgba(255,255,255,0.6);">Private information</span>
                     {% endif %}
                 </p>
                 {% if doctor.phone %}
-                <p class="mb-1 text-dark"><i class="fas fa-phone text-primary"></i> {{ doctor.phone }}</p>
+                <p class="mb-2" style="color: rgba(255,255,255,0.9);">
+                    <i class="fas fa-phone" style="color: rgba(255,255,255,0.8);"></i> 
+                    {{ doctor.phone }}
+                </p>
                 {% endif %}
                 <p class="mb-0">
-                    <span class="badge badge-{% if doctor.isActive %}success{% else %}secondary{% endif %}">
-                        {% if doctor.isActive %}Active{% else %}Inactive{% endif %}
+                    <span class="status-badge" style="background: {% if doctor.isActive %}rgba(40, 167, 69, 0.9){% else %}rgba(108, 117, 125, 0.9){% endif %}; color: white;">
+                        {% if doctor.isActive %}✓ Active{% else %}○ Inactive{% endif %}
                     </span>
                 </p>
             </div>
-            <div class="col-md-2 text-right">
-                <a href="{% url 'doctors:list' %}" class="btn btn-light">
+            <div class="col-md-2 text-end">
+                <a href="{% url 'doctors:list' %}" class="btn btn-light" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; backdrop-filter: blur(10px);">
                     <i class="fas fa-arrow-left"></i> Back to List
                 </a>
             </div>
@@ -144,56 +360,56 @@
                 <h5><i class="fas fa-user"></i> Doctor Information</h5>
                 <table class="table table-borderless">
                     <tr>
-                        <td><strong class="text-dark">ID:</strong></td>
-                        <td class="text-dark">{{ doctor.userId|slice:":8" }}...</td>
+                        <td><strong>ID:</strong></td>
+                        <td>{{ doctor.userId|slice:":8" }}...</td>
                     </tr>
                     <tr>
-                        <td><strong class="text-dark">Username:</strong></td>
-                        <td class="text-dark">{{ doctor.username|default:"N/A" }}</td>
+                        <td><strong>Username:</strong></td>
+                        <td>{{ doctor.username|default:"N/A" }}</td>
                     </tr>
                     <tr>
-                        <td><strong class="text-dark">Email:</strong></td>
-                        <td class="text-dark">
+                        <td><strong>Email:</strong></td>
+                        <td>
                             {% if doctor.email %}
                                 {{ doctor.email }}
                             {% else %}
-                                <span class="text-muted">Private information</span>
+                                <span style="color: var(--text-muted);">Private information</span>
                             {% endif %}
                         </td>
                     </tr>
                     {% if doctor.phone %}
                     <tr>
-                        <td><strong class="text-dark">Phone:</strong></td>
-                        <td class="text-dark">{{ doctor.phone }}</td>
+                        <td><strong>Phone:</strong></td>
+                        <td>{{ doctor.phone }}</td>
                     </tr>
                     {% endif %}
                     <tr>
-                        <td><strong class="text-dark">License Number:</strong></td>
-                        <td class="text-dark">{{ doctor.licenseNumber|default:"N/A" }}</td>
+                        <td><strong>License Number:</strong></td>
+                        <td>{{ doctor.licenseNumber|default:"N/A" }}</td>
                     </tr>
                     <tr>
-                        <td><strong class="text-dark">Specialization:</strong></td>
-                        <td class="text-dark">{{ doctor.specialization }}</td>
+                        <td><strong>Specialization:</strong></td>
+                        <td>{{ doctor.specialization }}</td>
                     </tr>
                     <tr>
-                        <td><strong class="text-dark">Years of Experience:</strong></td>
-                        <td class="text-dark">{{ doctor.yearsOfExperience|default:"N/A" }} years</td>
+                        <td><strong>Years of Experience:</strong></td>
+                        <td>{{ doctor.yearsOfExperience|default:"N/A" }} years</td>
                     </tr>
                     <tr>
-                        <td><strong class="text-dark">Consultation Fee:</strong></td>
-                        <td class="text-dark">
+                        <td><strong>Consultation Fee:</strong></td>
+                        <td>
                             {% if doctor.consultationFee %}
-                                ${{ doctor.consultationFee }}
+                                <span style="color: var(--brand-success); font-weight: 600;">${{ doctor.consultationFee }}</span>
                             {% else %}
                                 Contact for pricing
                             {% endif %}
                         </td>
                     </tr>
                     <tr>
-                        <td><strong class="text-dark">Status:</strong></td>
+                        <td><strong>Status:</strong></td>
                         <td>
-                            <span class="badge badge-{% if doctor.isActive %}success{% else %}secondary{% endif %}">
-                                {% if doctor.isActive %}Accepting Patients{% else %}Not Accepting{% endif %}
+                            <span class="status-badge" style="background: {% if doctor.isActive %}#28a745{% else %}#6c757d{% endif %}; color: white; font-weight: 600; padding: 0.5rem 1rem; border-radius: 20px; display: inline-block;">
+                                {% if doctor.isActive %}✓ Accepting Patients{% else %}○ Not Accepting{% endif %}
                             </span>
                         </td>
                     </tr>
@@ -207,17 +423,17 @@
 
                 {% if doctor.education %}
                 <div class="mb-3">
-                    <strong class="text-dark">Education:</strong>
-                    <p class="mb-2 text-dark">{{ doctor.education }}</p>
+                    <strong style="color: var(--text-primary);">Education:</strong>
+                    <p class="mb-2" style="color: var(--text-secondary);">{{ doctor.education }}</p>
                 </div>
                 {% endif %}
 
                 {% if doctor.certifications %}
                 <div class="mb-3">
-                    <strong class="text-dark">Certifications:</strong>
+                    <strong style="color: var(--text-primary);">Certifications:</strong>
                     <div class="mt-2">
                         {% for cert in doctor.certifications %}
-                            <span class="badge badge-info mr-1 mb-1">{{ cert }}</span>
+                        <p class="mb-2" style="color: var(--text-secondary);">{{cert}}</p>  
                         {% endfor %}
                     </div>
                 </div>
@@ -225,10 +441,10 @@
 
                 {% if doctor.languagesSpoken %}
                 <div class="mb-0">
-                    <strong class="text-dark">Languages:</strong>
+                    <strong style="color: var(--text-primary);">Languages:</strong>
                     <div class="mt-2">
                         {% for lang in doctor.languagesSpoken %}
-                            <span class="badge badge-secondary mr-1 mb-1">{{ lang }}</span>
+                            <span class="badge" style="background: var(--brand-secondary); color: white; margin-right: 0.5rem; margin-bottom: 0.5rem; font-weight: 500;">{{ lang }}</span>
                         {% endfor %}
                     </div>
                 </div>
@@ -239,11 +455,11 @@
             <!-- Quick Actions -->
             <div class="info-card">
                 <h5><i class="fas fa-tools"></i> Quick Actions</h5>
-                <div class="d-flex flex-wrap">
-                    <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-info btn-action">
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-info btn-action" style="background: var(--brand-info); border: none;">
                         <i class="fas fa-clock"></i> View Schedule
                     </a>
-                    <button class="btn btn-success btn-action" onclick="bookAppointment('{{ doctor.userId }}')">
+                    <button class="btn btn-success btn-action" onclick="bookAppointment('{{ doctor.userId }}')" style="background: var(--brand-success); border: none;">
                         <i class="fas fa-plus"></i> Book Appointment
                     </button>
                 </div>
@@ -255,31 +471,48 @@
             <div class="info-card">
                 <h5><i class="fas fa-calendar-check text-primary"></i> Weekly Schedule</h5>
                 {% if doctor.weeklySchedule %}
-                    <div class="row">
+                    <div class="weekly-schedule">
                         {% for day_schedule in doctor.weeklySchedule %}
-                            <div class="col-12 mb-2">
-                                <div class="d-flex justify-content-between align-items-center p-2 border rounded {% if day_schedule.available %}bg-light-success{% else %}bg-light{% endif %}">
-                                    <strong class="text-dark">{{ day_schedule.day }}</strong>
-                                    {% if day_schedule.available %}
-                                        <span class="badge bg-success">{{ day_schedule.start }} - {{ day_schedule.end }}</span>
-                                    {% else %}
-                                        <span class="badge bg-secondary">Closed</span>
-                                    {% endif %}
+                            <div class="schedule-item {% if day_schedule.available %}available{% else %}unavailable{% endif %}">
+                                <div class="schedule-header">
+                                    <div class="day-info">
+                                        <h6 class="day-name">{{ day_schedule.day }}</h6>
+                                        <span class="day-status">
+                                            {% if day_schedule.available %}
+                                                <i class="fas fa-check-circle text-success"></i> Working Hours
+                                            {% else %}
+                                                <i class="fas fa-times-circle text-muted"></i> Day Off
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="time-display">
+                                        {% if day_schedule.available %}
+                                            <div class="time-badge working">
+                                                <i class="fas fa-clock"></i>
+                                                <span class="time-text">{{ day_schedule.start }} - {{ day_schedule.end }}</span>
+                                            </div>
+                                        {% else %}
+                                            <div class="time-badge closed">
+                                                <i class="fas fa-times"></i>
+                                                <span class="time-text">Closed</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p class="text-muted">No schedule information available.</p>
+                    <p style="color: var(--text-muted);">No schedule information available.</p>
                 {% endif %}
 
                 {% if availability %}
-                    <hr>
-                    <h6 class="text-primary">Current Availability Slots</h6>
+                    <hr style="border-color: var(--border-default);">
+                    <h6 style="color: var(--brand-primary); font-weight: 600;">Current Availability Slots</h6>
                     {% for slot in availability %}
                         <div class="availability-slot">
                             <strong>{{ slot.day_of_week|title }}</strong><br>
-                            {{ slot.start_time }} - {{ slot.end_time }}
+                            <i class="fas fa-clock me-1"></i>{{ slot.start_time }} - {{ slot.end_time }}
                         </div>
                     {% endfor %}
                 {% endif %}
@@ -316,7 +549,7 @@
                         </div>
                     </div>
                 {% else %}
-                    <p class="text-muted">No performance data available.</p>
+                    <p style="color: var(--text-muted);">No performance data available.</p>
                 {% endif %}
             </div>
         </div>
@@ -329,22 +562,22 @@
                     {% for appointment in schedule|slice:":5" %}
                         <div class="schedule-item">
                             <div class="d-flex justify-content-between">
-                                <strong>{{ appointment.date }}</strong>
-                                <span class="badge badge-primary">{{ appointment.time }}</span>
+                                <strong style="color: var(--text-primary);">{{ appointment.date }}</strong>
+                                <span class="badge" style="background: var(--brand-primary); color: white;">{{ appointment.time }}</span>
                             </div>
-                            <p class="mb-1">{{ appointment.patientName|default:"Patient" }}</p>
-                            <small class="text-muted">{{ appointment.type|default:"Consultation" }}</small>
+                            <p class="mb-1" style="color: var(--text-secondary);">{{ appointment.patientName|default:"Patient" }}</p>
+                            <small style="color: var(--text-muted);">{{ appointment.type|default:"Consultation" }}</small>
                         </div>
                     {% endfor %}
                     {% if schedule|length > 5 %}
                         <div class="text-center mt-2">
-                            <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-sm btn-outline-primary">
+                            <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-sm btn-outline-primary" style="border-color: var(--brand-primary); color: var(--brand-primary);">
                                 View All Schedule
                             </a>
                         </div>
                     {% endif %}
                 {% else %}
-                    <p class="text-muted">No scheduled appointments.</p>
+                    <p style="color: var(--text-muted);">No scheduled appointments.</p>
                 {% endif %}
             </div>
         </div>

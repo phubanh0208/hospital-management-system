@@ -6,13 +6,13 @@
 {% block extra_css %}
 <style>
     .form-section {
-        background: #f8f9fc;
-        border-left: 4px solid #f6c23e;
+        background: var(--surface-page);
+        border-left: 4px solid var(--brand-accent-2);
         padding: 1rem;
         margin-bottom: 1.5rem;
     }
     .form-section h5 {
-        color: #f6c23e;
+        color: var(--brand-accent-2);
         margin-bottom: 1rem;
     }
     .required-field::after {
@@ -20,14 +20,14 @@
         color: #e74a3b;
     }
     .form-control:focus {
-        border-color: #f6c23e;
-        box-shadow: 0 0 0 0.2rem rgba(246, 194, 62, 0.25);
+        border-color: var(--brand-accent-2);
+        box-shadow: 0 0 0 0.2rem rgba(255, 209, 102, 0.25);
     }
     .patient-avatar {
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: linear-gradient(45deg, #f6c23e, #fd7e14);
+        background: linear-gradient(45deg, var(--brand-accent-2), #fd7e14);
         display: flex;
         align-items: center;
         justify-content: center;

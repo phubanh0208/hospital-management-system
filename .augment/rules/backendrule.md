@@ -26,6 +26,6 @@ frontend directory:
 D:\hospital-management\hospital-frontend\
 
 Database : Container in docker
-
+Schema: D:\hospital-management\database
 
 

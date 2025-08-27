@@ -7,17 +7,17 @@
 {% block extra_css %}
 <style>
     .prescription-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
         color: white;
         padding: 2rem;
-        border-radius: 8px;
+        border-radius: var(--radius-sm);
         margin-bottom: 2rem;
     }
     
     .info-card {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: var(--surface-card);
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-sm);
         padding: 1.5rem;
         margin-bottom: 1.5rem;
     }
@@ -38,18 +38,18 @@
     .status-expired { background-color: #fff3cd; color: #856404; }
     
     .medication-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-sm);
         padding: 1.5rem;
         margin-bottom: 1rem;
-        background: #f8f9fa;
+        background: var(--surface-page);
     }
     
     .medication-header {
-        background: #667eea;
+        background: var(--brand-primary);
         color: white;
         padding: 0.75rem 1rem;
-        border-radius: 6px;
+        border-radius: var(--radius-sm);
         margin-bottom: 1rem;
     }
     
@@ -77,9 +77,9 @@
     .action-buttons {
         position: sticky;
         top: 20px;
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: var(--surface-card);
+        border-radius: var(--radius-sm);
+        box-shadow: var(--shadow-sm);
         padding: 1.5rem;
     }
     
