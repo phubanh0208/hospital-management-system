@@ -52,35 +52,36 @@ export class EmailService {
     }
   }
 
-  public async sendEmail(options: EmailOptions): Promise<boolean> {
+    public async sendEmail(options: EmailOptions): Promise<boolean> {
     if (!this.isConfigured) {
       logger.warn('Email service not configured, skipping email send');
       return false;
     }
 
     try {
+      const decryptedEmail = options.to;
       const mailOptions = {
         from: process.env.EMAIL_FROM || 'Hospital Management <noreply@hospital.com>',
-        to: options.to,
+        to: decryptedEmail,
         subject: options.subject,
         text: options.text,
         html: options.html,
-        attachments: options.attachments
+        attachments: options.attachments,
       };
 
       const result = await this.transporter.sendMail(mailOptions);
-      
+
       logger.info('Email sent successfully', {
-        to: options.to,
+        to: decryptedEmail,
         subject: options.subject,
-        messageId: result.messageId
+        messageId: result.messageId,
       });
 
       return true;
     } catch (error) {
       logger.error('Failed to send email:', error, {
-        to: options.to,
-        subject: options.subject
+        to: options.to, // Log original encrypted email on error
+        subject: options.subject,
       });
       return false;
     }

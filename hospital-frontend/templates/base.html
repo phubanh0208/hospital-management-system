@@ -158,6 +158,10 @@
                                 <li><h6 class="dropdown-header">Notifications</h6></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-muted" href="#">No new notifications</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'notifications:list' %}">
+                                    <i class="fas fa-bell me-2"></i>View All Notifications
+                                </a></li>
                             </ul>
                         </li>
                         
@@ -245,6 +249,7 @@
     <!-- Custom JS -->
     <script src="{% load static %}{% static 'js/main.js' %}"></script>
     
+    {% block base_websocket %}
     <!-- WebSocket for Real-time Notifications -->
     {% if is_authenticated %}
     <script>
@@ -353,6 +358,7 @@
         });
     </script>
     {% endif %}
+    {% endblock %}
     
     {% block extra_js %}{% endblock %}
 </body>

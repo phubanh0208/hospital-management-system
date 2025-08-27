@@ -132,6 +132,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # API Gateway Configuration
 API_GATEWAY_BASE_URL = 'http://localhost:3000'
+API_GATEWAY_URL = 'http://localhost:3000'  # For notification views compatibility
 API_GATEWAY_TIMEOUT = 30
 
 # WebSocket Configuration for Real-time Features (In-memory for development)

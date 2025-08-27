@@ -30,11 +30,25 @@ export class RabbitMQConnection {
 
       // Setup exchange and queue
       const exchange = process.env.NOTIFICATION_EXCHANGE || 'notification_exchange';
-      const queue = process.env.NOTIFICATION_QUEUE || 'notification_queue';
+            const queue = process.env.NOTIFICATION_QUEUE || 'notification_queue_v2';
+      const dlx = process.env.NOTIFICATION_DLX || 'notification_exchange_dlx';
+            const dlq = process.env.NOTIFICATION_DLQ || 'notification_queue_dlq_v2';
 
       await this.channel.assertExchange(exchange, 'topic', { durable: true });
-      await this.channel.assertQueue(queue, { durable: true });
-      
+
+      // Assert Dead Letter Exchange and Queue
+      await this.channel.assertExchange(dlx, 'fanout', { durable: true });
+      await this.channel.assertQueue(dlq, { durable: true });
+      await this.channel.bindQueue(dlq, dlx, ''); // Bind DLQ to DLX
+
+      // Assert main queue with DLX configuration
+      await this.channel.assertQueue(queue, {
+        durable: true,
+        arguments: {
+          'x-dead-letter-exchange': dlx
+        }
+      });
+
       // Bind queue to exchange with routing keys
       await this.channel.bindQueue(queue, exchange, 'notification.*');
       await this.channel.bindQueue(queue, exchange, 'appointment.*');
@@ -124,7 +138,7 @@ export class RabbitMQConnection {
       throw new Error('RabbitMQ channel not available');
     }
 
-    const queue = process.env.NOTIFICATION_QUEUE || 'notification_queue';
+        const queue = process.env.NOTIFICATION_QUEUE || 'notification_queue_v2';
 
     try {
       await this.channel.consume(queue, async (msg: any) => {

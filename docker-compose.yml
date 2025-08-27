@@ -11,6 +11,7 @@ services:
       POSTGRES_DB: auth_service_db
       POSTGRES_USER: auth_user
       POSTGRES_PASSWORD: auth_password_123
+      TZ: 'UTC+7'
     volumes:
       - auth_db_data:/var/lib/postgresql/data
       - ./database/init/auth-init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -32,6 +33,7 @@ services:
       POSTGRES_DB: patient_service_db
       POSTGRES_USER: patient_user
       POSTGRES_PASSWORD: patient_password_123
+      TZ: 'UTC+7'
     volumes:
       - patient_db_data:/var/lib/postgresql/data
       - ./database/init/patient-init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -53,6 +55,7 @@ services:
       POSTGRES_DB: appointment_service_db
       POSTGRES_USER: appointment_user
       POSTGRES_PASSWORD: appointment_password_123
+      TZ: 'UTC+7'
     volumes:
       - appointment_db_data:/var/lib/postgresql/data
       - ./database/init/appointment-init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -74,6 +77,7 @@ services:
       POSTGRES_DB: prescription_service_db
       POSTGRES_USER: prescription_user
       POSTGRES_PASSWORD: prescription_password_123
+      TZ: 'UTC+7'
     volumes:
       - prescription_db_data:/var/lib/postgresql/data
       - ./database/init/prescription-init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -95,6 +99,7 @@ services:
       MONGO_INITDB_DATABASE: notification_service_db
       MONGO_INITDB_ROOT_USERNAME: notification_user
       MONGO_INITDB_ROOT_PASSWORD: notification_password_123
+      TZ: 'UTC+7'
     volumes:
       - notification_db_data:/data/db
       - ./database/init/notification-init.js:/docker-entrypoint-initdb.d/init.js
@@ -116,6 +121,7 @@ services:
       POSTGRES_DB: analytics_service_db
       POSTGRES_USER: analytics_user
       POSTGRES_PASSWORD: analytics_password_123
+      TZ: 'UTC+7'
     volumes:
       - analytics_db_data:/var/lib/postgresql/data
       - ./database/init/analytics-init.sql:/docker-entrypoint-initdb.d/init.sql

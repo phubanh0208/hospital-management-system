@@ -11,6 +11,7 @@ import doctorAvailabilityRoutes from './routes/doctorAvailability';
 import appointmentSlotsRoutes from './routes/appointmentSlots';
 import doctorRoutes from './routes/doctors';
 
+
 const app = express();
 const PORT = parseInt(getEnvVar('PORT', '3003'));
 
@@ -54,6 +55,10 @@ app.listen(PORT, () => {
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`, {
     service: 'appointment-service'
   });
+  
+
 });
+
+
 
 export default app;

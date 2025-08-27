@@ -2456,6 +2456,105 @@ app.post('/api/notifications/queue/bulk', authenticate, authorize('admin', 'staf
 });
 
 // ======================
+// ADMIN NOTIFICATION ROUTES
+// ======================
+
+// Get retry statistics
+app.get('/api/notifications/admin/retry-stats', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res) => {
+  try {
+    console.log('📊 Get Retry Statistics Request');
+    const response = await fetch(`${getServiceUrl('notification')}/api/notifications/admin/retry-stats`, {
+      headers: { 'Authorization': req.headers.authorization || '' },
+      signal: AbortSignal.timeout(Number(process.env.GATEWAY_UPSTREAM_TIMEOUT_MS || 5000))
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Get Retry Statistics Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Notification service unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Process retries manually
+app.post('/api/notifications/admin/process-retries', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res) => {
+  try {
+    console.log('🔄 Process Retries Request');
+    const response = await fetch(`${getServiceUrl('notification')}/api/notifications/admin/process-retries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''
+      },
+      body: JSON.stringify(req.body),
+      signal: AbortSignal.timeout(Number(process.env.GATEWAY_UPSTREAM_TIMEOUT_MS || 5000))
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Process Retries Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Notification service unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Cleanup old retries
+app.post('/api/notifications/admin/cleanup-retries', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res) => {
+  try {
+    console.log('🧹 Cleanup Retries Request');
+    const response = await fetch(`${getServiceUrl('notification')}/api/notifications/admin/cleanup-retries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''
+      },
+      body: JSON.stringify(req.body),
+      signal: AbortSignal.timeout(Number(process.env.GATEWAY_UPSTREAM_TIMEOUT_MS || 5000))
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Cleanup Retries Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Notification service unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Send test notification
+app.post('/api/notifications/admin/test-notification', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res) => {
+  try {
+    console.log('🧪 Test Notification Request');
+    const response = await fetch(`${getServiceUrl('notification')}/api/notifications/admin/test-notification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''
+      },
+      body: JSON.stringify(req.body),
+      signal: AbortSignal.timeout(Number(process.env.GATEWAY_UPSTREAM_TIMEOUT_MS || 5000))
+    });
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('❌ Test Notification Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Notification service unavailable',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ======================
 // ANALYTICS ENDPOINTS
 // ======================
 

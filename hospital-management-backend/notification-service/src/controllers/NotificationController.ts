@@ -430,4 +430,95 @@ export class NotificationController {
       res.status(500).json(createErrorResponse('Failed to queue bulk notification'));
     }
   };
+
+  // ========== ADMIN ENDPOINTS ==========
+
+  // GET /api/notifications/admin/retry-stats
+  public getRetryStatistics = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const timeframe = req.query.timeframe as string || '24 hours';
+      const retryService = this.notificationService.getRetryService();
+      const stats = await retryService.getRetryStatistics(timeframe);
+      
+      res.json(createSuccessResponse(stats, `Retry statistics for the last ${timeframe} retrieved successfully`));
+    } catch (error) {
+      logger.error('Error getting retry statistics:', error);
+      res.status(500).json(createErrorResponse('Failed to retrieve retry statistics'));
+    }
+  };
+
+  // POST /api/notifications/admin/process-retries
+  public processRetries = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const retryService = this.notificationService.getRetryService();
+      await retryService.processRetries();
+      
+      res.json(createSuccessResponse(
+        { status: 'completed', message: 'Retry processing triggered successfully' },
+        'Retry processing completed'
+      ));
+    } catch (error) {
+      logger.error('Error processing retries:', error);
+      res.status(500).json(createErrorResponse('Failed to process retries'));
+    }
+  };
+
+  // POST /api/notifications/admin/cleanup-retries
+  public cleanupRetries = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const olderThanDays = parseInt(req.body.olderThanDays as string) || 30;
+      const retryService = this.notificationService.getRetryService();
+      await retryService.cleanupOldRetries(olderThanDays);
+      
+      res.json(createSuccessResponse(
+        { olderThanDays, message: `Cleanup completed for retries older than ${olderThanDays} days` },
+        'Retry cleanup completed'
+      ));
+    } catch (error) {
+      logger.error('Error cleaning up retries:', error);
+      res.status(500).json(createErrorResponse('Failed to cleanup retries'));
+    }
+  };
+
+  // POST /api/notifications/admin/test-notification
+  public testNotification = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        recipient_user_id,
+        channels,
+        title = 'Test Notification',
+        message = 'This is a test notification to verify the system is working correctly.',
+        type = 'system'
+      } = req.body;
+
+      if (!recipient_user_id) {
+        res.status(400).json(createErrorResponse('recipient_user_id is required for test notification'));
+        return;
+      }
+
+      const notificationData: CreateNotificationData = {
+        recipient_user_id,
+        recipient_type: 'user',
+        title,
+        message,
+        type,
+        priority: 'normal',
+        channels: channels || ['web', 'email']
+      };
+
+      const notification = await this.notificationService.createNotification(notificationData);
+
+      res.status(201).json(createSuccessResponse(
+        {
+          notificationId: notification.id,
+          channels: notification.channels,
+          status: 'sent'
+        },
+        'Test notification sent successfully'
+      ));
+    } catch (error) {
+      logger.error('Error sending test notification:', error);
+      res.status(500).json(createErrorResponse('Failed to send test notification'));
+    }
+  };
 }

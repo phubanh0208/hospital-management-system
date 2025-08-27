@@ -1,8 +1,11 @@
+// Load environment variables FIRST before any other imports
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import dotenv from 'dotenv';
 import { createServer } from 'http';
 import { logger } from '@hospital/shared';
 
@@ -13,9 +16,6 @@ import { MessageHandler } from './services/MessageHandler';
 
 // Import routes
 import notificationRoutes from './routes/notificationRoutes';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const server = createServer(app);
@@ -128,30 +128,29 @@ const startServer = async () => {
         logger.info('Received message from RabbitMQ:', {
           messageId: message.id || 'unknown',
           type: message.type || 'unknown',
-          timestamp: message.timestamp || new Date()
+          timestamp: message.timestamp || new Date(),
         });
 
-        // Validate message structure
-        if (!messageHandler.validateMessage(message)) {
-          logger.error('Invalid message structure received', { message });
+        // Validate and process the message
+        if (messageHandler.validateMessage(message)) {
+          await messageHandler.processMessage(message);
+          logger.info('Message processed successfully', {
+            messageId: message.id,
+            type: message.type,
+          });
+        } else {
+          logger.error('Invalid message structure received, message will be rejected', { message });
+          // By throwing an error, the message will be NACK'd and sent to the DLQ
           throw new Error('Invalid message structure');
         }
-
-        // Process the message
-        await messageHandler.processMessage(message);
-
-        logger.info('Message processed successfully', {
-          messageId: message.id,
-          type: message.type
-        });
-
       } catch (error) {
         logger.error('Error processing RabbitMQ message:', {
           error: error instanceof Error ? error.message : 'Unknown error',
-          message: message,
-          stack: error instanceof Error ? error.stack : undefined
+          message: message, // Log the problematic message
+          stack: error instanceof Error ? error.stack : undefined,
         });
-        throw error; // Re-throw to trigger NACK
+        // Re-throw to ensure the message is NACK'd and sent to the DLQ
+        throw error;
       }
     });
 

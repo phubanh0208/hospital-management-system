@@ -250,31 +250,36 @@ export const getEnvBoolean = (name: string, defaultValue?: boolean): boolean => 
 
 // Encryption utilities for sensitive data
 const ENCRYPTION_ALGORITHM = 'aes-256-cbc';
-const IV_LENGTH = 16;
+const getEncryptionComponents = (): { key: Buffer; iv: Buffer } => {
+  const keyHex = getEnvVar('ENCRYPTION_KEY');
+  const ivHex = getEnvVar('ENCRYPTION_IV');
 
-export const getEncryptionKey = (): Buffer => {
-  const key = getEnvVar('ENCRYPTION_KEY');
-  if (key.length !== 64) { // 32 bytes = 64 hex chars
+  if (keyHex.length !== 64) {
     throw new Error('ENCRYPTION_KEY must be 64 hex characters (32 bytes)');
   }
-  return Buffer.from(key, 'hex');
+  if (ivHex.length !== 32) {
+    throw new Error('ENCRYPTION_IV must be 32 hex characters (16 bytes)');
+  }
+
+  return {
+    key: Buffer.from(keyHex, 'hex'),
+    iv: Buffer.from(ivHex, 'hex'),
+  };
 };
 
 export const encryptSensitiveData = (text: string): string => {
   if (!text || text.trim() === '') {
     return text;
   }
-  
+
   try {
-    const key = getEncryptionKey();
-    const iv = crypto.randomBytes(IV_LENGTH);
+    const { key, iv } = getEncryptionComponents();
     const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
-    
+
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
-    // Combine iv + encrypted data
-    return iv.toString('hex') + encrypted;
+
+    return encrypted;
   } catch (error) {
     throw new Error(`Encryption failed: ${error}`);
   }
@@ -284,19 +289,14 @@ export const decryptSensitiveData = (encryptedText: string): string => {
   if (!encryptedText || encryptedText.trim() === '') {
     return encryptedText;
   }
-  
+
   try {
-    const key = getEncryptionKey();
-    
-    // Extract iv and encrypted data
-    const iv = Buffer.from(encryptedText.slice(0, IV_LENGTH * 2), 'hex');
-    const encrypted = encryptedText.slice(IV_LENGTH * 2);
-    
+    const { key, iv } = getEncryptionComponents();
     const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
-    
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
-    
+
     return decrypted;
   } catch (error) {
     throw new Error(`Decryption failed: ${error}`);

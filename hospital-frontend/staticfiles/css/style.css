@@ -13,10 +13,50 @@
     --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+/* Modern theme tokens (added) */
+:root {
+    /* Brand */
+    --brand-primary: #6C5CE7;
+    --brand-secondary: #00D1B2;
+    --brand-accent: #FF6B6B;
+    --brand-accent-2: #FFD166;
+
+    /* Typography */
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
+
+    /* Surfaces */
+    --surface-page: #f7f8fc;
+    --surface-card: #ffffff;
+    --surface-elevated: #ffffff;
+    --border-default: #e5e7eb;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-md: 0 8px 24px rgba(17, 17, 26, 0.08);
+    --shadow-lg: 0 16px 48px rgba(17, 17, 26, 0.12);
+}
+
+/* Dark theme tokens */
+[data-theme="dark"] {
+    --text-primary: #e5e7eb;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --surface-page: #0f172a;
+    --surface-card: #111827;
+    --surface-elevated: #0b1220;
+    --border-default: #1f2937;
+    --brand-primary: #8b7cf6;
+    --brand-secondary: #34e1c1;
+    --brand-accent: #ff7b86;
+}
+
 /* Global Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f6fa;
+    background-color: var(--surface-page);
+    color: var(--text-primary);
 }
 
 /* Navigation */
@@ -88,10 +128,10 @@ body {
 
 /* Tables */
 .table {
-    background: white;
+    background: var(--surface-card);
     border-radius: var(--border-radius);
     overflow: hidden;
-    box-shadow: var(--box-shadow);
+    box-shadow: var(--shadow-sm);
 }
 
 .table thead th {
@@ -102,15 +142,15 @@ body {
 }
 
 .table tbody tr:hover {
-    background-color: rgba(102, 126, 234, 0.05);
+    background-color: rgba(108, 92, 231, 0.06);
 }
 
 /* Dashboard Cards */
 .dashboard-card {
-    background: white;
+    background: var(--surface-card);
     border-radius: var(--border-radius);
     padding: 1.5rem;
-    box-shadow: var(--box-shadow);
+    box-shadow: var(--shadow-md);
     transition: all 0.3s ease;
 }
 
@@ -178,6 +218,25 @@ body {
 .badge {
     border-radius: var(--border-radius);
     font-weight: 500;
+}
+
+/* Dark mode typography adjustments */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] label,
+[data-theme="dark"] small,
+[data-theme="dark"] .small,
+[data-theme="dark"] .card-title {
+    color: var(--text-secondary) !important;
 }
 
 /* Loading Spinner */

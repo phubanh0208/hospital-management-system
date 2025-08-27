@@ -25,4 +25,10 @@ router.post('/queue/prescription-ready', notificationController.queuePrescriptio
 router.post('/queue/system-alert', notificationController.queueSystemAlert);
 router.post('/queue/bulk', notificationController.queueBulkNotification);
 
+// Admin endpoints
+router.get('/admin/retry-stats', notificationController.getRetryStatistics);
+router.post('/admin/process-retries', notificationController.processRetries);
+router.post('/admin/cleanup-retries', notificationController.cleanupRetries);
+router.post('/admin/test-notification', notificationController.testNotification);
+
 export default router;

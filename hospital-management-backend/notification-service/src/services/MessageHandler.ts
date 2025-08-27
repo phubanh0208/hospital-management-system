@@ -1,14 +1,17 @@
-import { logger } from '@hospital/shared';
+import { logger, publishToRabbitMQ } from '@hospital/shared';
 import { NotificationService, CreateNotificationData } from './NotificationService';
-import { 
-  RabbitMQMessage, 
+import {
+  RabbitMQMessage,
   CreateNotificationMessage,
   SendNotificationMessage,
   AppointmentReminderMessage,
+  AppointmentConfirmedMessage,
   PrescriptionReadyMessage,
   SystemAlertMessage,
   BulkNotificationMessage
 } from '../types/MessageTypes';
+import { RabbitMQMessageSchema } from '../types/MessageSchemas';
+import { ZodError } from 'zod';
 
 export class MessageHandler {
   private notificationService: NotificationService;
@@ -17,62 +20,64 @@ export class MessageHandler {
     this.notificationService = new NotificationService();
   }
 
+  public validateMessage(message: unknown): message is RabbitMQMessage {
+    try {
+      RabbitMQMessageSchema.parse(message);
+      return true;
+    } catch (error) {
+      if (error instanceof ZodError) {
+        logger.error('Invalid message structure received', {
+                    errors: error.issues,
+        });
+      }
+      return false;
+    }
+  }
+
+
   /**
    * Main message processing entry point
    */
-  public async processMessage(message: RabbitMQMessage): Promise<void> {
+    public async processMessage(message: RabbitMQMessage): Promise<void> {
+    const { id: messageId, type: messageType } = message;
+
     try {
       logger.info('Processing RabbitMQ message', {
-        messageId: message.id,
-        type: message.type,
-        timestamp: message.timestamp
+        messageId,
+        type: messageType,
+        timestamp: message.timestamp,
       });
 
       switch (message.type) {
         case 'create_notification':
-          await this.handleCreateNotification(message);
-          break;
-
-        case 'send_notification':
-          await this.handleSendNotification(message);
+          await this.handleCreateNotification(message as CreateNotificationMessage);
           break;
 
         case 'appointment_reminder':
-          await this.handleAppointmentReminder(message);
+          await this.handleAppointmentReminder(message as AppointmentReminderMessage);
           break;
 
         case 'prescription_ready':
-          await this.handlePrescriptionReady(message);
+          await this.handlePrescriptionReady(message as PrescriptionReadyMessage);
           break;
 
-        case 'system_alert':
-          await this.handleSystemAlert(message);
-          break;
-
-        case 'bulk_notification':
-          await this.handleBulkNotification(message);
+        case 'appointment_confirmed':
+          await this.handleAppointmentConfirmed(message as AppointmentConfirmedMessage);
           break;
 
         default:
-          logger.warn('Unknown message type received', {
-            messageId: (message as any).id,
-            type: (message as any).type
-          });
+          logger.warn('Unknown message type received', { messageId, type: messageType });
       }
 
-      logger.info('Message processed successfully', {
-        messageId: message.id,
-        type: message.type
-      });
-
+      logger.info('Message processed successfully', { messageId, type: messageType });
     } catch (error) {
       logger.error('Error processing RabbitMQ message', {
-        messageId: message.id,
-        type: message.type,
+        messageId,
+        type: messageType,
         error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined
+        stack: error instanceof Error ? error.stack : undefined,
       });
-      throw error; // Re-throw to trigger NACK
+      throw error; // Re-throw to trigger NACK and send to DLQ
     }
   }
 
@@ -121,6 +126,41 @@ export class MessageHandler {
     logger.info('Notification sent from RabbitMQ message', {
       messageId: message.id,
       notificationId: data.notification_id
+    });
+  }
+
+  /**
+   * Handle appointment reminder message
+   */
+  private async handleAppointmentConfirmed(message: AppointmentConfirmedMessage): Promise<void> {
+    const { data } = message;
+
+    const notificationData: CreateNotificationData = {
+      recipient_user_id: data.recipient_user_id,
+      recipient_type: 'patient',
+      title: 'Xác nhận lịch hẹn',
+      message: `Lịch hẹn của bạn vào ${data.appointment_date} lúc ${data.appointment_time} với bác sĩ ${data.doctor_name} đã được xác nhận.`,
+      type: 'appointment',
+      priority: 'high',
+      channels: ['web', 'email', 'sms'],
+      template_name: 'appointment_confirmation',
+      template_variables: {
+        patient_name: data.patient_name,
+        doctor_name: data.doctor_name,
+        appointment_date: data.appointment_date,
+        appointment_time: data.appointment_time,
+        appointment_number: data.appointment_number || 'N/A',
+        room_number: data.room_number || 'N/A',
+        reason: data.reason || 'Khám tổng quát'
+      }
+    };
+
+    await this.notificationService.createNotification(notificationData);
+
+    logger.info('Appointment confirmation notification created from RabbitMQ', {
+      messageId: message.id,
+      patientName: data.patient_name,
+      appointmentDate: data.appointment_date
     });
   }
 
@@ -225,7 +265,7 @@ export class MessageHandler {
         title: data.title,
         priority: data.priority
       });
-      
+
       // TODO: Implement broadcast functionality
       // This could involve getting all active users and creating notifications for each
     }
@@ -249,7 +289,7 @@ export class MessageHandler {
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      
+
       const promises = batch.map(async (userId) => {
         const notificationData: CreateNotificationData = {
           recipient_user_id: userId,
@@ -281,22 +321,5 @@ export class MessageHandler {
     });
   }
 
-  /**
-   * Validate message structure
-   */
-  public validateMessage(message: any): message is RabbitMQMessage {
-    if (!message || typeof message !== 'object') {
-      return false;
-    }
 
-    if (!message.id || !message.type || !message.timestamp) {
-      return false;
-    }
-
-    if (!message.data || typeof message.data !== 'object') {
-      return false;
-    }
-
-    return true;
-  }
 }

@@ -5,6 +5,7 @@ import {
 } from '@hospital/shared';
 import { v4 as uuidv4 } from 'uuid';
 import { EventService } from './EventService';
+import axios from 'axios';
 
 export interface PrescriptionResult {
   success: boolean;
@@ -65,6 +66,7 @@ export interface UpdatePrescriptionData {
 
 export class PrescriptionService {
   private pool: any;
+  private notificationServiceUrl: string = process.env.NOTIFICATION_SERVICE_URL || 'http://localhost:3005';
 
   constructor() {
     this.pool = getPool('prescription');
@@ -477,7 +479,27 @@ export class PrescriptionService {
         const updatedPrescription = fullPrescriptionResult.data;
 
         // Send event based on status change
-        if (status === 'dispensed') {
+        if (status === 'active') {
+          // Send prescription active notification (immediate - email, SMS, web)
+          await this.sendPrescriptionActiveNotification(updatedPrescription);
+          EventService.sendEvent('prescription.active', updatedPrescription);
+        } else if (status === 'ready_for_pickup') {
+          // Send prescription ready notification
+          await this.sendPrescriptionReadyNotification(updatedPrescription);
+          EventService.sendEvent('prescription.ready_for_pickup', {
+            data: {
+              recipient_user_id: updatedPrescription.patient_id,
+              patient_name: updatedPrescription.patient_name,
+              doctor_name: updatedPrescription.doctor_name,
+              prescription_number: updatedPrescription.prescription_number,
+              total_amount: updatedPrescription.total_amount || 0,
+              currency: updatedPrescription.currency || 'VND',
+              pharmacy_name: process.env.PHARMACY_NAME || 'Hospital Pharmacy',
+              pickup_instructions: this.generatePickupInstructions(updatedPrescription),
+              medications: this.formatMedicationsForNotification(updatedPrescription.items)
+            }
+          });
+        } else if (status === 'dispensed') {
           EventService.sendEvent('prescription.dispensed', updatedPrescription);
         } else if (status === 'completed') {
           EventService.sendEvent('prescription.completed', updatedPrescription);
@@ -527,6 +549,150 @@ export class PrescriptionService {
       return {
         success: false,
         message: 'Failed to delete prescription'
+      };
+    }
+  }
+
+  /**
+   * Send prescription active notification via RabbitMQ
+   * Called when prescription status changes to 'active'
+   */
+  private async sendPrescriptionActiveNotification(prescription: any): Promise<void> {
+    try {
+      logger.info('Sending prescription active notification via RabbitMQ', {
+        prescriptionId: prescription.id,
+        prescriptionNumber: prescription.prescription_number,
+        patientName: prescription.patient_name
+      });
+      
+      const notificationData = {
+        recipient_user_id: prescription.patient_id,
+        patient_name: prescription.patient_name,
+        doctor_name: prescription.doctor_name,
+        prescription_number: prescription.prescription_number,
+        issued_date: prescription.issued_date,
+        total_cost: prescription.total_amount || 0,
+        currency: prescription.currency || 'VND',
+        medications: this.formatMedicationsForNotification(prescription.items || []),
+        instructions: prescription.instructions || ''
+      };
+
+      // Send immediate notification via RabbitMQ
+      const eventData = {
+        type: 'prescription.active',
+        data: notificationData
+      };
+      await EventService.sendEvent('prescription.active', eventData);
+
+      logger.info('Prescription active notification sent via RabbitMQ', {
+        prescriptionId: prescription.id,
+        patientName: prescription.patient_name
+      });
+      
+    } catch (error) {
+      logger.error('Error sending prescription active notification via RabbitMQ:', error);
+      // Don't throw - continue processing even if notification fails
+    }
+  }
+
+  /**
+   * Send prescription ready notification via RabbitMQ
+   */
+  private async sendPrescriptionReadyNotification(prescription: any): Promise<void> {
+    try {
+      logger.info('Sending prescription ready notification via RabbitMQ', {
+        prescriptionId: prescription.id,
+        prescriptionNumber: prescription.prescription_number,
+        patientName: prescription.patient_name
+      });
+      
+      const notificationData = {
+        recipient_user_id: prescription.patient_id,
+        patient_name: prescription.patient_name,
+        doctor_name: prescription.doctor_name,
+        prescription_number: prescription.prescription_number,
+        issued_date: prescription.issued_date,
+        total_cost: prescription.total_amount || 0,
+        currency: prescription.currency || 'VND',
+        pharmacy_name: process.env.PHARMACY_NAME || 'Hospital Pharmacy',
+        pickup_instructions: this.generatePickupInstructions(prescription),
+        medications: this.formatMedicationsForNotification(prescription.items || [])
+      };
+
+      // Send via RabbitMQ for ready status
+      const eventData = {
+        type: 'prescription.ready',
+        data: notificationData
+      };
+      await EventService.sendEvent('prescription.ready', eventData);
+
+      logger.info('Prescription ready notification sent via RabbitMQ', {
+        prescriptionId: prescription.id,
+        patientName: prescription.patient_name
+      });
+      
+    } catch (error) {
+      logger.error('Error sending prescription ready notification via RabbitMQ:', error);
+      // Don't throw - continue processing even if notification fails
+    }
+  }
+
+  /**
+   * Generate pickup instructions for the prescription
+   */
+  private generatePickupInstructions(prescription: any): string {
+    const pharmacyHours = process.env.PHARMACY_HOURS || '8:00 AM - 6:00 PM (Monday-Friday), 8:00 AM - 12:00 PM (Saturday)';
+    const phoneNumber = process.env.PHARMACY_PHONE || '(84) 123-456-789';
+    
+    return `Your prescription is ready for pickup at ${process.env.PHARMACY_NAME || 'Hospital Pharmacy'}. ` +
+           `Please bring your ID and insurance card. Hours: ${pharmacyHours}. ` +
+           `For questions, call ${phoneNumber}. ` +
+           `Valid until: ${prescription.valid_until ? new Date(prescription.valid_until).toLocaleDateString('vi-VN') : 'N/A'}.`;
+  }
+
+  /**
+   * Format medications for notification template
+   */
+  private formatMedicationsForNotification(items: any[]): string {
+    if (!items || items.length === 0) {
+      return 'No medications listed';
+    }
+    
+    return items.map(item => 
+      `${item.medication_name} - ${item.dosage}, ${item.frequency}, ${item.duration} (Qty: ${item.quantity}${item.unit ? ' ' + item.unit : ''})`
+    ).join('; ');
+  }
+
+  /**
+   * Mark prescription as ready (convenience method)
+   */
+  async markPrescriptionAsReady(id: string, preparedByUserId?: string, preparedByName?: string): Promise<PrescriptionResult> {
+    try {
+      const updateData: UpdatePrescriptionData = {
+        status: 'ready'
+      };
+
+      // Add additional fields if provided
+      if (preparedByUserId) {
+        // We could add prepared_by_user_id field to the database schema in the future
+        logger.info('Prescription prepared by:', { userId: preparedByUserId, name: preparedByName });
+      }
+
+      const result = await this.updatePrescription(id, updateData);
+      
+      if (result.success) {
+        logger.info('Prescription marked as ready and notification sent', {
+          prescriptionId: id,
+          preparedBy: preparedByName || 'Unknown'
+        });
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('Error marking prescription as ready:', error);
+      return {
+        success: false,
+        message: 'Failed to mark prescription as ready'
       };
     }
   }

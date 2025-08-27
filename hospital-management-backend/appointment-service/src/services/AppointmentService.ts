@@ -5,6 +5,7 @@ import {
 } from '@hospital/shared';
 import { v4 as uuidv4 } from 'uuid';
 import { EventService } from './EventService';
+import { appointmentScheduler } from './AppointmentReminderScheduler';
 
 export interface AppointmentResult {
   success: boolean;
@@ -316,6 +317,12 @@ export class AppointmentService {
   }
 
   async updateAppointment(id: string, updateData: UpdateAppointmentData): Promise<AppointmentResult> {
+    // If the update specifically sets the status to 'confirmed', use the dedicated confirmation logic.
+    if (updateData.status && updateData.status === 'confirmed') {
+      // We can pass other data from the update payload to confirmAppointment if needed in the future.
+      return this.confirmAppointment(id);
+    }
+
     try {
       // Build dynamic update query
       const updateFields: string[] = [];
@@ -341,17 +348,17 @@ export class AppointmentService {
 
       // Add updated_at
       updateFields.push(`updated_at = NOW()`);
-      
+
       // Add id for WHERE clause
       values.push(id);
 
       const query = `
-        UPDATE appointments 
+        UPDATE appointments
         SET ${updateFields.join(', ')}
         WHERE id = $${paramCount}
-        RETURNING 
+        RETURNING
           id, appointment_number, patient_id, patient_name, patient_phone,
-          doctor_id, doctor_name, appointment_type, scheduled_date, 
+          doctor_id, doctor_name, appointment_type, scheduled_date,
           duration_minutes, status, priority, reason, symptoms, notes,
           doctor_notes, room_number, fee, is_paid, created_by_user_id,
           created_at, updated_at, confirmed_at, completed_at
@@ -425,8 +432,9 @@ export class AppointmentService {
         SET status = 'confirmed', confirmed_at = NOW(), updated_at = NOW()
         WHERE id = $1 AND status = 'scheduled'
         RETURNING 
-          id, appointment_number, patient_name, doctor_name, 
-          scheduled_date, status, confirmed_at
+          id, appointment_number, patient_id, patient_name, doctor_name, 
+          scheduled_date, appointment_type, duration_minutes, reason,
+          room_number, status, confirmed_at
       `;
 
       const result = await executeQuery(this.pool, query, [id]);
@@ -438,11 +446,39 @@ export class AppointmentService {
         };
       }
 
-      EventService.sendEvent('appointment.updated', result[0]); // Confirmed is a status update
+      const appointment = result[0];
+
+      // Send analytics event
+      EventService.sendEvent('appointment.updated', appointment);
+
+      // Schedule confirmation and reminder notifications
+      try {
+        const scheduledDate = new Date(appointment.scheduled_date);
+        const appointmentDate = scheduledDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        const appointmentTime = scheduledDate.toTimeString().split(' ')[0].substring(0, 5); // HH:MM
+
+        await appointmentScheduler.scheduleAppointmentNotifications({
+          appointment_id: appointment.id,
+          patient_id: appointment.patient_id,
+          patient_name: appointment.patient_name,
+          doctor_name: appointment.doctor_name,
+          appointment_date: appointmentDate,
+          appointment_time: appointmentTime,
+          appointment_number: appointment.appointment_number,
+          room_number: appointment.room_number,
+          reason: appointment.reason,
+        });
+        logger.info('Appointment notifications scheduled successfully', {
+          appointmentId: appointment.id,
+        });
+      } catch (notificationError) {
+        logger.error('Failed to schedule appointment notifications:', notificationError);
+        // Continue - don't fail the confirmation if notification scheduling fails
+      }
 
       return {
         success: true,
-        data: result[0],
+        data: appointment,
         message: 'Appointment confirmed successfully'
       };
     } catch (error) {

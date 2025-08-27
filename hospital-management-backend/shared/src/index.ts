@@ -5,3 +5,4 @@ export * from './database';
 export * from './validation';
 export * from './middleware';
 export { logger } from './logger';
+export * from './rabbitmq';

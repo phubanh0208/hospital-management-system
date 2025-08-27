@@ -164,7 +164,7 @@ services:
       - PORT=3005
       - MONGODB_URI=mongodb://notification_user:notification_password_123@hospital-notification-db:27017/notification_service_db?authSource=admin
       - RABBITMQ_URL=amqp://hospital:hospital_mq_123@hospital-rabbitmq:5672/hospital_vhost
-      - NOTIFICATION_QUEUE=notification_queue
+            - NOTIFICATION_QUEUE=notification_queue_v2
       - NOTIFICATION_EXCHANGE=notification_exchange
       - EMAIL_HOST=smtp.gmail.com
       - EMAIL_PORT=587

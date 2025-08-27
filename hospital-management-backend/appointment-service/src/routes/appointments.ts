@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AppointmentController } from '../controllers/AppointmentController';
 
+
 const router = Router();
 const appointmentController = new AppointmentController();
 
@@ -24,5 +25,7 @@ router.put('/:id/complete', appointmentController.completeAppointment);
 // Doctor and patient specific routes
 router.get('/doctor/:doctorId/schedule', appointmentController.getDoctorSchedule);
 router.get('/patient/:patientId', appointmentController.getPatientAppointments);
+
+
 
 export default router;

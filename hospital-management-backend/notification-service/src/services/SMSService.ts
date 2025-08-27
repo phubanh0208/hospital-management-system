@@ -33,33 +33,34 @@ export class SMSService {
     }
   }
 
-  public async sendSMS(to: string, message: string): Promise<boolean> {
+    public async sendSMS(to: string, message: string): Promise<boolean> {
     if (!this.isConfigured || !this.client) {
       logger.warn('SMS service not configured, skipping SMS send');
       return false;
     }
 
     try {
+      const decryptedPhone = to;
       // Format phone number for Vietnam (+84)
-      const formattedPhone = this.formatPhoneNumber(to);
-      
+      const formattedPhone = this.formatPhoneNumber(decryptedPhone);
+
       const result = await this.client.messages.create({
         body: message,
         from: this.phoneNumber,
-        to: formattedPhone
+        to: formattedPhone,
       });
 
       logger.info('SMS sent successfully', {
         to: formattedPhone,
         messageSid: result.sid,
-        status: result.status
+        status: result.status,
       });
 
       return true;
     } catch (error) {
       logger.error('Failed to send SMS:', error, {
-        to: to,
-        message: message.substring(0, 50) + '...'
+        to: to, // Log original encrypted phone on error
+        message: message.substring(0, 50) + '...',
       });
       return false;
     }

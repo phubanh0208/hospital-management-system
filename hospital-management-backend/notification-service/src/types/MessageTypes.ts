@@ -47,6 +47,21 @@ export interface AppointmentReminderMessage extends BaseMessage {
   };
 }
 
+export interface AppointmentConfirmedMessage extends BaseMessage {
+  type: 'appointment_confirmed';
+  data: {
+    recipient_user_id: string;
+    patient_name: string;
+    doctor_name: string;
+    appointment_date: string;
+    appointment_time: string;
+    appointment_number?: string;
+    room_number?: string;
+    reason?: string;
+  };
+}
+
+
 export interface PrescriptionReadyMessage extends BaseMessage {
   type: 'prescription_ready';
   data: {
@@ -85,13 +100,15 @@ export interface BulkNotificationMessage extends BaseMessage {
 }
 
 // Union type for all message types
-export type RabbitMQMessage = 
+export type RabbitMQMessage =
   | CreateNotificationMessage
   | SendNotificationMessage
   | AppointmentReminderMessage
   | PrescriptionReadyMessage
   | SystemAlertMessage
-  | BulkNotificationMessage;
+  | BulkNotificationMessage
+  | AppointmentConfirmedMessage;
+
 
 // Message routing keys
 export const MessageRoutingKeys = {
