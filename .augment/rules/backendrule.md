@@ -6,7 +6,6 @@ i already run all service in dev mod. If you have any in change code, dont run i
 **Important:never using npm run dev or any same for run service
 # Service URLs - Localhost for development
 AUTH_SERVICE_URL=http://localhost:3001
-PATIENT_SERVICE_URL=http://localhost:3002
 APPOINTMENT_SERVICE_URL=http://localhost:3003
 PRESCRIPTION_SERVICE_URL=http://localhost:3004
 NOTIFICATION_SERVICE_URL=http://localhost:3005

@@ -62,7 +62,7 @@ export class VisitSummaryService {
   }> {
     try {
       // Call appointment service API
-      const appointmentServiceUrl = process.env.APPOINTMENT_SERVICE_URL || 'http://appointment-service:3003';
+      const appointmentServiceUrl = process.env.APPOINTMENT_SERVICE_URL || 'http://localhost:3003';
       
       const response = await fetch(`${appointmentServiceUrl}/api/appointments?patientId=${patientId}&limit=1000`);
       
@@ -99,7 +99,7 @@ export class VisitSummaryService {
   }> {
     try {
       // Call prescription service API
-      const prescriptionServiceUrl = process.env.PRESCRIPTION_SERVICE_URL || 'http://prescription-service:3004';
+      const prescriptionServiceUrl = process.env.PRESCRIPTION_SERVICE_URL || 'http://localhost:3004';
       
       const response = await fetch(`${prescriptionServiceUrl}/api/prescriptions?patientId=${patientId}&limit=1000`);
       
@@ -112,8 +112,12 @@ export class VisitSummaryService {
       const prescriptions = data.data?.prescriptions || [];
 
       // Calculate stats
+      // Count prescriptions that are active (draft + active status)
+      // - 'draft': Created prescriptions not yet finalized
+      // - 'active': Active prescriptions ready for dispensing
+      // Exclude: 'dispensed', 'completed', 'cancelled', 'expired'
       const activePrescriptions = prescriptions.filter((rx: any) => 
-        rx.status === 'active' || rx.status === 'pending'
+        rx.status === 'active' || rx.status === 'draft'
       ).length;
 
       const lastPrescriptionDate = prescriptions.length > 0

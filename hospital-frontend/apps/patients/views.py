@@ -103,9 +103,7 @@ class PatientDetailView(View):
                 if not visit_summary:
                     visit_summary = {
                         'totalAppointments': 0,
-                        'activePrescriptions': 0,
-                        'lastAppointmentDate': None,
-                        'lastPrescriptionDate': None
+                        'activePrescriptions': 0
                     }
                     logger.warning(f"Visit summary API failed, using defaults: {visit_summary}")
 

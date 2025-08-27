@@ -112,7 +112,7 @@
                             <a href="{% url 'prescriptions:list' %}?patient_id={{ patient.id }}" class="text-decoration-none">
                                 <div class="stat-card bg-info text-white p-3 hover-lift">
                                     <i class="fas fa-pills fa-2x mb-2"></i>
-                                    <div class="small">Active Rx</div>
+                                    <div class="small">Total</div>
                                     <div class="h5">{{ visit_summary.activePrescriptions|default:0 }}</div>
                                 </div>
                             </a>
@@ -239,24 +239,12 @@
                                 <strong>Total Appointments:</strong> 
                                 <span class="badge bg-primary">{{ visit_summary.totalAppointments|default:0 }}</span>
                             </p>
-                            {% if visit_summary.lastAppointmentDate %}
-                            <p class="mb-2">
-                                <strong>Last Appointment:</strong> 
-                                {{ visit_summary.lastAppointmentDate|date:"M d, Y" }}
-                            </p>
-                            {% endif %}
                         </div>
                         <div class="col-md-6">
                             <p class="mb-2">
-                                <strong>Active Prescriptions:</strong> 
+                                <strong>Total Prescriptions:</strong>
                                 <span class="badge bg-success">{{ visit_summary.activePrescriptions|default:0 }}</span>
                             </p>
-                            {% if visit_summary.lastPrescriptionDate %}
-                            <p class="mb-2">
-                                <strong>Last Prescription:</strong> 
-                                {{ visit_summary.lastPrescriptionDate|date:"M d, Y" }}
-                            </p>
-                            {% endif %}
                         </div>
                     </div>
                 </div>
