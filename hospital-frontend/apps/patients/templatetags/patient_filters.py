@@ -2,6 +2,7 @@ from django import template
 from datetime import datetime, date
 from dateutil.parser import parse
 import logging
+import json
 
 register = template.Library()
 logger = logging.getLogger(__name__)
@@ -11,8 +12,12 @@ def calculate_age(birth_date):
     """Calculate age from birth date string or datetime object"""
     try:
         if isinstance(birth_date, str):
-            # Parse ISO date string
-            birth_date = parse(birth_date).date()
+            # Extract just the date part to avoid timezone issues
+            if 'T' in birth_date:
+                date_part = birth_date.split('T')[0]  # Get "1993-01-14" from "1993-01-14T17:00:00.000Z"
+                birth_date = datetime.strptime(date_part, '%Y-%m-%d').date()
+            else:
+                birth_date = parse(birth_date).date()
         elif isinstance(birth_date, datetime):
             birth_date = birth_date.date()
         elif not isinstance(birth_date, date):
@@ -93,3 +98,35 @@ def gender_icon(gender):
     }
     
     return icon_map.get(gender.lower(), 'fas fa-question')
+
+@register.filter
+def iso_to_date(value, fmt="F d, Y"):
+    """Parse ISO 8601 datetime string and format as date only (ignoring time/timezone).
+    Usage: {{ patient.dateOfBirth|iso_to_date:"F d, Y" }}
+    This avoids timezone conversion issues by extracting only the date part.
+    """
+    if not value:
+        return ""
+    try:
+        if isinstance(value, str):
+            # Extract just the date part from ISO string (before 'T')
+            if 'T' in value:
+                date_part = value.split('T')[0]  # Get "1993-01-14" from "1993-01-14T17:00:00.000Z"
+            else:
+                date_part = value
+            
+            # Parse as date only (no time/timezone)
+            dt = datetime.strptime(date_part, '%Y-%m-%d')
+        elif isinstance(value, datetime):
+            dt = value
+        else:
+            return ""
+        
+        # Format the date
+        if fmt == "F d, Y":
+            return dt.strftime("%B %d, %Y")  # "February 09, 2003"
+        else:
+            return dt.strftime(fmt)
+    except Exception as e:
+        logger.error(f"iso_to_date parse error: {e}; value={value}")
+        return ""

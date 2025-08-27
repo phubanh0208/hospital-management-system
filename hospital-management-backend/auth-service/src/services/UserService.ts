@@ -76,35 +76,46 @@ export class UserService {
 
   async getAllUsers(page: number, limit: number, filters: UserFilters): Promise<GetUsersResult> {
     try {
+      logger.info('🔍 Getting all users with filters:', filters);
+      
       let whereClause = 'WHERE 1=1';
       const params: any[] = [];
       let paramIndex = 1;
 
       // Add search filter
       if (filters.search) {
-        whereClause += ` AND (username ILIKE $${paramIndex} OR email ILIKE $${paramIndex})`;
+        whereClause += ` AND (u.username ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`;
         params.push(`%${filters.search}%`);
         paramIndex++;
       }
 
       // Add role filter
       if (filters.role) {
-        whereClause += ` AND role = $${paramIndex}`;
+        whereClause += ` AND u.role = $${paramIndex}`;
         params.push(filters.role);
         paramIndex++;
       }
 
       // Add active status filter
       if (filters.isActive !== undefined) {
-        whereClause += ` AND is_active = $${paramIndex}`;
+        whereClause += ` AND u.is_active = $${paramIndex}`;
         params.push(filters.isActive);
         paramIndex++;
       }
 
       // Get total count
-      const countQuery = `SELECT COUNT(*) as total FROM users ${whereClause}`;
+      const countQuery = `SELECT COUNT(*) as total FROM users u ${whereClause}`;
+      logger.info('📊 Count query:', countQuery, 'params:', params);
       const countResult = await executeQuery(this.pool, countQuery, params);
       const total = parseInt(countResult[0].total);
+      logger.info('📊 Total users found:', total);
+
+      if (total === 0) {
+        return {
+          users: [],
+          total: 0
+        };
+      }
 
       // Get users with pagination
       const offset = (page - 1) * limit;
@@ -119,34 +130,48 @@ export class UserService {
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `;
       
+      logger.info('📋 Users query:', usersQuery, 'params:', [...params, limit, offset]);
       const users = await executeQuery(this.pool, usersQuery, [...params, limit, offset]);
+      logger.info(`👥 Found ${users.length} users in database`);
 
-      const formattedUsers = users.map(user => ({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        profile: user.profile_id ? {
-          id: user.profile_id,
-          userId: user.id,
-          firstName: user.first_name || '',
-          lastName: user.last_name || '',
-          phone: user.phone || '',
-          dateOfBirth: user.date_of_birth || null,
-          address: user.address || '',
-          avatarUrl: user.avatar_url || ''
-        } : undefined,
-        isActive: user.is_active,
-        createdAt: user.created_at,
-        updatedAt: user.updated_at
-      }));
+      const formattedUsers = [];
+      for (const user of users) {
+        try {
+          const formattedUser = {
+            id: user.id,
+            username: user.username,
+            email: user.email ? decryptEmail(user.email) : '',
+            role: user.role,
+            profile: user.profile_id ? {
+              id: user.profile_id,
+              userId: user.id,
+              firstName: user.first_name || '',
+              lastName: user.last_name || '',
+              phone: user.phone ? decryptPhone(user.phone) : '',
+              dateOfBirth: user.date_of_birth || null,
+              address: user.address || '',
+              avatarUrl: user.avatar_url || ''
+            } : undefined,
+            isActive: user.is_active,
+            createdAt: user.created_at,
+            updatedAt: user.updated_at
+          };
+          formattedUsers.push(formattedUser);
+        } catch (userError) {
+          logger.error(`❌ Error formatting user ${user.id}:`, userError);
+          // Skip this user and continue with others
+          continue;
+        }
+      }
+
+      logger.info(`✅ Successfully formatted ${formattedUsers.length} users`);
 
       return {
         users: formattedUsers,
         total
       };
     } catch (error) {
-      logger.error('Get all users service error:', error);
+      logger.error('❌ Get all users service error:', error);
       return {
         users: [],
         total: 0
@@ -187,6 +212,19 @@ export class UserService {
         RETURNING id, username, email, role, hospital_id, is_active, is_verified, created_at, updated_at
       `;
 
+      // Determine default active status based on role
+      let defaultIsActive;
+      if (userData.isActive !== undefined) {
+        // If explicitly set, use that value
+        defaultIsActive = userData.isActive;
+      } else {
+        // Default logic: patients are active, all other roles are inactive
+        const userRole = userData.role || UserRole.STAFF;
+        defaultIsActive = userRole === UserRole.PATIENT;
+      }
+      
+      logger.info(`🔐 Creating user with role: ${userData.role || UserRole.STAFF}, isActive: ${defaultIsActive}`);
+
       const newUsers = await executeQuery(this.pool, insertQuery, [
         userId,
         userData.username,
@@ -194,7 +232,7 @@ export class UserService {
         passwordHash,
         userData.role || UserRole.STAFF,
         userData.hospitalId || null,
-        userData.isActive !== false, // Default to true unless explicitly set to false
+        defaultIsActive,
         false // Default to not verified
       ]);
 

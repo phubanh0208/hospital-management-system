@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}User Analytics - {{ hospital_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 2rem;
+    text-align: center;
+    height: 100%;
+    border: none;
+}
+.stats-number {
+    font-size: 3rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+.stats-label {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.chart-container {
+    position: relative;
+    height: 400px;
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.info-card {
+    border-radius: 1rem;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.role-distribution {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.role-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #f8f9fa;
+    border-radius: 2rem;
+    font-size: 0.9rem;
+}
+.role-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'dashboard:index' %}">Dashboard</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'users:list' %}">Users</a>
+                            </li>
+                            <li class="breadcrumb-item active">Analytics</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-1">
+                        <i class="fas fa-chart-bar text-primary me-2"></i>
+                        User Analytics
+                    </h1>
+                    <p class="text-muted mb-0">Overview of user management statistics and trends</p>
+                </div>
+                <div>
+                    <a href="{% url 'users:list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Users
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="stats-number" id="totalUsers">{{ total_users|default:0 }}</div>
+                <div class="stats-label">Total Users</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="stats-number" id="activeUsers">{{ active_users|default:0 }}</div>
+                <div class="stats-label">Active Users</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <div class="stats-number" id="newUsersThisMonth">{{ new_users_this_month|default:0 }}</div>
+                <div class="stats-label">New This Month</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                <div class="stats-number" id="inactiveUsers">{{ inactive_users|default:0 }}</div>
+                <div class="stats-label">Inactive Users</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- User Roles Distribution -->
+        <div class="col-lg-6 mb-4">
+            <div class="info-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        User Roles Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="rolesChart"></canvas>
+                    </div>
+                    <div class="role-distribution" id="roleDistribution">
+                        <div class="role-item">
+                            <span class="role-color" style="background: #dc3545;"></span>
+                            <span>Admin: <strong id="adminCount">{{ role_stats.admin|default:0 }}</strong></span>
+                        </div>
+                        <div class="role-item">
+                            <span class="role-color" style="background: #28a745;"></span>
+                            <span>Doctor: <strong id="doctorCount">{{ role_stats.doctor|default:0 }}</strong></span>
+                        </div>
+                        <div class="role-item">
+                            <span class="role-color" style="background: #17a2b8;"></span>
+                            <span>Nurse: <strong id="nurseCount">{{ role_stats.nurse|default:0 }}</strong></span>
+                        </div>
+                        <div class="role-item">
+                            <span class="role-color" style="background: #ffc107;"></span>
+                            <span>Staff: <strong id="staffCount">{{ role_stats.staff|default:0 }}</strong></span>
+                        </div>
+                        <div class="role-item">
+                            <span class="role-color" style="background: #6c757d;"></span>
+                            <span>Patient: <strong id="patientCount">{{ role_stats.patient|default:0 }}</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Registration Trends -->
+        <div class="col-lg-6 mb-4">
+            <div class="info-card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Registration Trends (Last 6 Months)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="trendsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Statistics -->
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="info-card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Recent Activity
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Users created today:</span>
+                        <strong class="text-success">{{ users_today|default:0 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Users created this week:</span>
+                        <strong class="text-info">{{ users_this_week|default:0 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Last user created:</span>
+                        <strong class="text-primary">{{ last_user_created|default:"N/A" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="info-card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Status Overview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ active_percentage|default:0 }}%" 
+                             id="activePercentage">
+                            Active ({{ active_percentage|default:0 }}%)
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Active users:</span>
+                        <strong class="text-success">{{ active_users|default:0 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Inactive users:</span>
+                        <strong class="text-danger">{{ inactive_users|default:0 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+            <div class="info-card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'users:create' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Create New User
+                        </a>
+                        <a href="{% url 'users:list' %}?status=inactive" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-users-slash me-1"></i>View Inactive Users
+                        </a>
+                        <button class="btn btn-outline-success btn-sm" onclick="exportAnalytics()">
+                            <i class="fas fa-download me-1"></i>Export Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Sample data - in a real application, this would come from the backend
+const roleData = {
+    admin: {{ role_stats.admin|default:0 }},
+    doctor: {{ role_stats.doctor|default:0 }},
+    nurse: {{ role_stats.nurse|default:0 }},
+    staff: {{ role_stats.staff|default:0 }},
+    patient: {{ role_stats.patient|default:0 }}
+};
+
+const monthlyData = [
+    {{ monthly_registrations.0|default:0 }},
+    {{ monthly_registrations.1|default:0 }},
+    {{ monthly_registrations.2|default:0 }},
+    {{ monthly_registrations.3|default:0 }},
+    {{ monthly_registrations.4|default:0 }},
+    {{ monthly_registrations.5|default:0 }}
+];
+
+// Role Distribution Chart
+const rolesCtx = document.getElementById('rolesChart').getContext('2d');
+const rolesChart = new Chart(rolesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Admin', 'Doctor', 'Nurse', 'Staff', 'Patient'],
+        datasets: [{
+            data: [
+                roleData.admin,
+                roleData.doctor,
+                roleData.nurse,
+                roleData.staff,
+                roleData.patient
+            ],
+            backgroundColor: [
+                '#dc3545',
+                '#28a745',
+                '#17a2b8',
+                '#ffc107',
+                '#6c757d'
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                        return `${label}: ${value} (${percentage}%)`;
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Registration Trends Chart
+const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+const trendsChart = new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: [
+            '{{ months_labels.0|default:"6 months ago" }}',
+            '{{ months_labels.1|default:"5 months ago" }}',
+            '{{ months_labels.2|default:"4 months ago" }}',
+            '{{ months_labels.3|default:"3 months ago" }}',
+            '{{ months_labels.4|default:"2 months ago" }}',
+            '{{ months_labels.5|default:"Last month" }}'
+        ],
+        datasets: [{
+            label: 'New Users',
+            data: monthlyData,
+            borderColor: '#17a2b8',
+            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#17a2b8',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        },
+        interaction: {
+            intersect: false,
+            mode: 'index'
+        }
+    }
+});
+
+// Export analytics function
+function exportAnalytics() {
+    // This would typically generate a PDF or CSV export
+    alert('Export functionality will be implemented. This would generate a comprehensive user analytics report.');
+}
+
+// Auto-refresh data every 5 minutes (optional)
+setTimeout(() => {
+    location.reload();
+}, 300000);
+</script>
+{% endblock %}

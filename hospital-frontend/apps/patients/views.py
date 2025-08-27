@@ -78,19 +78,36 @@ class PatientDetailView(View):
             return redirect('authentication:login')
 
         try:
+            # Debug token information
+            logger.info(f"Loading patient {patient_id} with token: {token[:20] if token else 'None'}...")
+            
             # Get patient details
             response = api_client.get_patient(token=token, patient_id=patient_id)
+            logger.info(f"Patient API response success: {response.get('success')}")
 
             if response.get('success'):
                 patient = response.get('data')
+                logger.info(f"Patient data loaded: {patient.get('fullName')}, DOB: {patient.get('dateOfBirth')}")
 
                 # Get medical history
                 history_response = api_client.get_patient_medical_history(token=token, patient_id=patient_id)
                 medical_history = history_response.get('data', []) if history_response.get('success') else []
+                logger.info(f"Medical history loaded: {len(medical_history) if medical_history else 0} records")
 
                 # Get visit summary
                 summary_response = api_client.get_patient_visit_summary(token=token, patient_id=patient_id)
                 visit_summary = summary_response.get('data', {}) if summary_response.get('success') else {}
+                logger.info(f"Visit summary loaded - Appointments: {visit_summary.get('totalAppointments', 'N/A')}, Prescriptions: {visit_summary.get('activePrescriptions', 'N/A')}")
+                
+                # Ensure visit_summary has default values if API failed
+                if not visit_summary:
+                    visit_summary = {
+                        'totalAppointments': 0,
+                        'activePrescriptions': 0,
+                        'lastAppointmentDate': None,
+                        'lastPrescriptionDate': None
+                    }
+                    logger.warning(f"Visit summary API failed, using defaults: {visit_summary}")
 
                 context = {
                     'patient': patient,
@@ -100,7 +117,9 @@ class PatientDetailView(View):
 
                 return render(request, 'patients/detail.html', context)
             else:
-                messages.error(request, f"Patient not found: {response.get('message', 'Unknown error')}")
+                error_message = response.get('message', 'Unknown error')
+                logger.error(f"Patient API failed: {error_message}")
+                messages.error(request, f"Patient not found: {error_message}")
                 return redirect('patients:list')
 
         except Exception as e:

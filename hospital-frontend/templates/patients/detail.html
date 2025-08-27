@@ -90,7 +90,13 @@
                             <div class="stat-card bg-primary text-white p-3">
                                 <i class="fas fa-birthday-cake fa-2x mb-2"></i>
                                 <div class="small">Age</div>
-                                <div class="h5">{{ patient.dateOfBirth|calculate_age }} years</div>
+                                <div class="h5">
+                                    {% if patient.dateOfBirth %}
+                                        {{ patient.dateOfBirth|calculate_age }} years
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </div>
                             </div>
                         </div>
                         <div class="col-4">
@@ -129,7 +135,13 @@
                             <div class="info-card p-3 mb-3">
                                 <h6><i class="fas fa-user text-primary"></i> Basic Info</h6>
                                 <p class="mb-1"><strong>Full Name:</strong> {{ patient.fullName }}</p>
-                                <p class="mb-1"><strong>Date of Birth:</strong> {{ patient.dateOfBirth|date:"F d, Y" }}</p>
+                                <p class="mb-1"><strong>Date of Birth:</strong> 
+                                    {% if patient.dateOfBirth %}
+                                        {{ patient.dateOfBirth|iso_to_date:"F d, Y" }}
+                                    {% else %}
+                                        <em class="text-muted">Not provided</em>
+                                    {% endif %}
+                                </p>
                                 <p class="mb-1"><strong>Gender:</strong> {{ patient.gender|title }}</p>
                                 {% if patient.bloodType %}
                                 <p class="mb-0"><strong>Blood Type:</strong> {{ patient.bloodType }}</p>

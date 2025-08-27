@@ -246,30 +246,84 @@ class APIClient:
         return response
     
     # User Management Methods (Admin only)
-    def get_users(self, token: str, page: int = 1, limit: int = 20, role: str = None) -> Dict[str, Any]:
-        """Get all users"""
+    def get_users(self, token: str, page: int = 1, limit: int = 20, 
+                 search: Optional[str] = None, role: Optional[str] = None, 
+                 is_active: Optional[bool] = None) -> Dict[str, Any]:
+        """Get all users with advanced filtering"""
         params = {'page': page, 'limit': limit}
+        if search:
+            params['search'] = search
         if role:
             params['role'] = role
-        return self._make_request('GET', '/api/users', token=token, params=params)
+        if is_active is not None:
+            params['isActive'] = is_active
+        
+        logger.info(f"Getting users with params: {params}")
+        response = self._make_request('GET', '/api/users', token=token, params=params)
+        logger.info(f"Get users response success: {response.get('success', False)}")
+        return response
+    
+    def get_user_by_id(self, token: str, user_id: str) -> Dict[str, Any]:
+        """Get user by ID"""
+        logger.info(f"Getting user by ID: {user_id}")
+        response = self._make_request('GET', f'/api/users/{user_id}', token=token)
+        logger.info(f"Get user by ID response success: {response.get('success', False)}")
+        return response
     
     def create_user(self, token: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new user"""
-        return self._make_request('POST', '/api/users', token=token, data=user_data)
+        logger.info(f"Creating user with username: {user_data.get('username', 'N/A')}")
+        response = self._make_request('POST', '/api/users', token=token, data=user_data)
+        logger.info(f"Create user response success: {response.get('success', False)}")
+        return response
     
     def update_user(self, token: str, user_id: str, user_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update user"""
-        return self._make_request('PUT', f'/api/users/{user_id}', token=token, data=user_data)
+        logger.info(f"Updating user: {user_id}")
+        response = self._make_request('PUT', f'/api/users/{user_id}', token=token, data=user_data)
+        logger.info(f"Update user response success: {response.get('success', False)}")
+        return response
     
-    def activate_user(self, token: str, user_id: str, reason: str = None) -> Dict[str, Any]:
+    def delete_user(self, token: str, user_id: str) -> Dict[str, Any]:
+        """Delete user"""
+        logger.info(f"Deleting user: {user_id}")
+        response = self._make_request('DELETE', f'/api/users/{user_id}', token=token)
+        logger.info(f"Delete user response success: {response.get('success', False)}")
+        return response
+    
+    def activate_user(self, token: str, user_id: str, reason: Optional[str] = None) -> Dict[str, Any]:
         """Activate user"""
-        return self._make_request('POST', f'/api/users/{user_id}/activate', 
-                                token=token, data={'reason': reason})
+        logger.info(f"Activating user: {user_id}")
+        data = {'reason': reason} if reason else {}
+        response = self._make_request('POST', f'/api/users/{user_id}/activate', token=token, data=data)
+        logger.info(f"Activate user response success: {response.get('success', False)}")
+        return response
     
-    def deactivate_user(self, token: str, user_id: str, reason: str = None) -> Dict[str, Any]:
+    def deactivate_user(self, token: str, user_id: str, reason: Optional[str] = None) -> Dict[str, Any]:
         """Deactivate user"""
-        return self._make_request('POST', f'/api/users/{user_id}/deactivate', 
-                                token=token, data={'reason': reason})
+        logger.info(f"Deactivating user: {user_id}")
+        data = {'reason': reason} if reason else {}
+        response = self._make_request('POST', f'/api/users/{user_id}/deactivate', token=token, data=data)
+        logger.info(f"Deactivate user response success: {response.get('success', False)}")
+        return response
+    
+    def search_users(self, token: str, search_term: str, role_filter: Optional[str] = None, 
+                    status_filter: Optional[bool] = None, page: int = 1, limit: int = 20) -> Dict[str, Any]:
+        """Search users with filters"""
+        params = {
+            'search': search_term,
+            'page': page,
+            'limit': limit
+        }
+        if role_filter:
+            params['role'] = role_filter
+        if status_filter is not None:
+            params['isActive'] = status_filter
+            
+        logger.info(f"Searching users with term: '{search_term}' and params: {params}")
+        response = self._make_request('GET', '/api/users', token=token, params=params)
+        logger.info(f"Search users response success: {response.get('success', False)}")
+        return response
     
 
     

@@ -243,7 +243,7 @@ export class PatientService {
       const newPatients = await executeQuery(this.pool, insertQuery, [
         patientId,
         patientData.fullName,
-        patientData.dateOfBirth,
+        this.formatDateForStorage(patientData.dateOfBirth),
         patientData.gender,
         patientData.phone,
         patientData.email || null,
@@ -302,7 +302,9 @@ export class PatientService {
       }
       if (patientData.dateOfBirth !== undefined) {
         updateFields.push(`date_of_birth = $${paramIndex++}`);
-        updateValues.push(patientData.dateOfBirth);
+        // Format date to avoid timezone issues - ensure it's stored as date only
+        const dateValue = this.formatDateForStorage(patientData.dateOfBirth);
+        updateValues.push(dateValue);
       }
       if (patientData.gender !== undefined) {
         updateFields.push(`gender = $${paramIndex++}`);
@@ -558,7 +560,7 @@ export class PatientService {
       id: row.id,
       patientCode: row.patient_code,
       fullName: row.full_name,
-      dateOfBirth: row.date_of_birth,
+      dateOfBirth: this.formatDateOnlyAsString(row.date_of_birth) as any,
       gender: row.gender,
       phone: row.phone,
       email: row.email,
@@ -577,5 +579,109 @@ export class PatientService {
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };
+  };
+
+  // Helper method to format date for storage to avoid timezone issues
+  private formatDateForStorage = (dateValue: any): string | null => {
+    if (!dateValue) return null;
+    
+    try {
+      // If it's already a string in YYYY-MM-DD format, return as-is
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        return dateValue;
+      }
+      
+      // If it's a Date object, format to YYYY-MM-DD
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try to parse and format other date formats
+      const parsedDate = new Date(dateValue);
+      if (!isNaN(parsedDate.getTime())) {
+        const year = parsedDate.getFullYear();
+        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Error formatting date for storage:', error);
+      return null;
+    }
+  };
+
+  // Helper method to format date as string only to avoid timezone issues
+  private formatDateOnlyAsString = (dateValue: any): string | undefined => {
+    if (!dateValue) return undefined;
+    
+    try {
+      // If it's already a string in YYYY-MM-DD format, return as-is
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        return dateValue;
+      }
+      
+      // If it's a Date object, format to YYYY-MM-DD string
+      if (dateValue instanceof Date) {
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      // Try to parse and format other date formats
+      const parsedDate = new Date(dateValue);
+      if (!isNaN(parsedDate.getTime())) {
+        const year = parsedDate.getFullYear();
+        const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(parsedDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+      
+      return undefined;
+    } catch (error) {
+      logger.error('Error formatting date as string:', error);
+      return undefined;
+    }
+  };
+
+  // Helper method to format date fields to avoid timezone issues
+  private formatDateOnly = (dateValue: any): Date | undefined => {
+    if (!dateValue) return undefined;
+    
+    try {
+      // If it's already a string in YYYY-MM-DD format, create a date in local time
+      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+        const [year, month, day] = dateValue.split('-').map(Number);
+        return new Date(year, month - 1, day); // month is 0-based in JS Date
+      }
+      
+      // If it's a Date object, recreate it in local time to avoid timezone conversion
+      if (dateValue instanceof Date) {
+        // Extract the date components in local time
+        const year = dateValue.getFullYear();
+        const month = dateValue.getMonth();
+        const day = dateValue.getDate();
+        return new Date(year, month, day); // Create new date in local time
+      }
+      
+      // Try to parse other formats
+      const parsedDate = new Date(dateValue);
+      if (!isNaN(parsedDate.getTime())) {
+        const year = parsedDate.getFullYear();
+        const month = parsedDate.getMonth();
+        const day = parsedDate.getDate();
+        return new Date(year, month, day); // Create date in local time
+      }
+      
+      return undefined;
+    } catch (error) {
+      logger.error('Error formatting date:', error);
+      return undefined;
+    }
   };
 }

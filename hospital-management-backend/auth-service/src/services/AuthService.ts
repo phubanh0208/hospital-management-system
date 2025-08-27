@@ -86,17 +86,20 @@ export class AuthService {
 
   async login(username: string, password: string): Promise<LoginResult> {
     try {
-      // Find user by username ONLY with profile
+      logger.info(`🔐 Login attempt for username: ${username}`);
+      
+      // First, find user by username without status check
       const users = await executeQuery(
         this.pool,
         `SELECT u.*, p.first_name, p.last_name, p.phone 
          FROM users u 
          LEFT JOIN user_profiles p ON u.id = p.user_id 
-         WHERE u.username = $1 AND u.is_active = true`,
+         WHERE u.username = $1`,
         [username]
       );
 
       if (users.length === 0) {
+        logger.warn(`❌ Login failed: User not found for username: ${username}`);
         return {
           success: false,
           message: 'Invalid username or password'
@@ -104,15 +107,28 @@ export class AuthService {
       }
 
       const user = users[0];
+      logger.info(`👤 Found user: ${user.username}, role: ${user.role}, active: ${user.is_active}`);
+
+      // Check if account is active BEFORE checking password
+      if (!user.is_active) {
+        logger.warn(`🚫 Login denied: Account inactive for user: ${username}`);
+        return {
+          success: false,
+          message: 'Your account is inactive. Please contact the administrator to activate your account.'
+        };
+      }
 
       // Verify password
       const isPasswordValid = await comparePassword(password, user.password_hash);
       if (!isPasswordValid) {
+        logger.warn(`❌ Login failed: Invalid password for username: ${username}`);
         return {
           success: false,
           message: 'Invalid username or password'
         };
       }
+      
+      logger.info(`✅ Login successful for user: ${username}`);
 
       // Generate tokens with decrypted email
       const tokenPayload: JWTPayload = {
@@ -192,6 +208,10 @@ export class AuthService {
 
       // Map role to database enum values
       const dbRole = this.mapRoleToDbEnum(userData.role || 'staff');
+      
+      // Determine default active status based on role - patients are active, others are inactive
+      const defaultIsActive = dbRole === 'patient';
+      logger.info(`🔐 Registering user with role: ${dbRole}, isActive: ${defaultIsActive}`);
 
       // Insert user
       const insertQuery = `
@@ -207,7 +227,7 @@ export class AuthService {
         encryptedEmail,
         passwordHash,
         dbRole,
-        true
+        defaultIsActive
       ]);
 
       const newUser = newUsers[0];
