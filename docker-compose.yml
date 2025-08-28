@@ -2,7 +2,7 @@ services:
   # ======================
   # DATABASES
   # ======================
-  
+
   # Auth Service Database
   auth-db:
     image: postgres:15-alpine
@@ -25,7 +25,7 @@ services:
     networks:
       - hospital-network
 
-  # Patient Service Database  
+  # Patient Service Database
   patient-db:
     image: postgres:15-alpine
     container_name: hospital-patient-db
@@ -150,6 +150,7 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
       - ./config/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./config/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
     ports:
       - "5672:5672"   # AMQP port
       - "15672:15672" # Management UI
