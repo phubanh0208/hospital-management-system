@@ -52,7 +52,7 @@ export class RabbitMQConnection {
       // Bind queue to exchange with routing keys
       await this.channel.bindQueue(queue, exchange, 'notification.*');
       await this.channel.bindQueue(queue, exchange, 'appointment.*');
-      await this.channel.bindQueue(queue, exchange, 'prescription.*');
+      await this.channel.bindQueue(queue, exchange, 'PRESCRIPTION_READY');
 
       this.isConnected = true;
       logger.info('RabbitMQ connected successfully', {

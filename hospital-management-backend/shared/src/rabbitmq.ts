@@ -206,7 +206,7 @@ class RabbitMQService {
         ...message,
         id: message.id || this.generateMessageId(),
         timestamp: new Date().toISOString(),
-        source: 'appointment-service', // Add source service
+        source: process.env.SERVICE_NAME || 'unknown-service', // Add source service
         headers: {
           'x-retry-count': 0,
           'x-original-routing-key': routingKey,

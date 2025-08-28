@@ -19,9 +19,10 @@ export class EventService {
       });
       
       // Also publish to RabbitMQ for prescription notifications with retry logic
-      if (type === 'prescription.ready') {
-        await this.publishWithRetry('PRESCRIPTION_READY', payload.data || payload, MAX_RETRIES);
-        logger.info(`Event '${type}' published to RabbitMQ with routing key 'PRESCRIPTION_READY'`);
+      if (type === 'prescription_ready') {
+        const routingKey = 'PRESCRIPTION_READY';
+        await this.publishWithRetry(routingKey, payload, MAX_RETRIES);
+        logger.info(`Event '${type}' published to RabbitMQ with routing key '${routingKey}'`);
       }
       
       logger.info(`Event '${type}' sent to analytics service.`);

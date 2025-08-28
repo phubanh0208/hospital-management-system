@@ -174,28 +174,5 @@ export class PrescriptionController {
     }
   };
 
-  // PUT /api/prescriptions/:id/mark-ready - Mark prescription as ready for pickup
-  markPrescriptionAsReady = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { id } = req.params;
-      const { preparedByUserId, preparedByName } = req.body;
 
-      const result = await this.prescriptionService.markPrescriptionAsReady(
-        id,
-        preparedByUserId,
-        preparedByName
-      );
-      
-      if (!result.success) {
-        const statusCode = result.message?.includes('not found') ? 404 : 400;
-        res.status(statusCode).json(createErrorResponse(result.message || 'Failed to mark prescription as ready'));
-        return;
-      }
-
-      res.json(createSuccessResponse(result.data, 'Prescription marked as ready and notification sent'));
-    } catch (error) {
-      logger.error('Mark prescription as ready error:', error);
-      res.status(500).json(createErrorResponse('Internal server error'));
-    }
-  };
 }

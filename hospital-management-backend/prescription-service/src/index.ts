@@ -1,10 +1,13 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import 'dotenv/config';
 import express from 'express';
-import { 
-  logger, 
-  errorHandler, 
+import {
+  logger,
+  errorHandler,
   requestLogger,
-  getEnvVar 
+  getEnvVar
 } from '@hospital/shared';
 import prescriptionRoutes from './routes/prescriptions';
 import medicationRoutes from './routes/medications';
@@ -18,7 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(requestLogger);
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
     service: 'prescription-service',

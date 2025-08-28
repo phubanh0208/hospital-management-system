@@ -10,7 +10,7 @@ router.get('/:id', prescriptionController.getPrescriptionById);
 router.get('/number/:prescriptionNumber', prescriptionController.getPrescriptionByNumber);
 router.post('/', prescriptionController.createPrescription);
 router.put('/:id', prescriptionController.updatePrescription);
-router.put('/:id/mark-ready', prescriptionController.markPrescriptionAsReady);
+
 router.delete('/:id', prescriptionController.deletePrescription);
 
 export default router;
