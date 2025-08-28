@@ -346,50 +346,60 @@
             <!-- Action Buttons -->
             <div class="action-buttons no-print">
                 <h5 class="mb-3">Actions</h5>
-                
+
                 <div class="d-grid gap-2">
-                    <a href="{% url 'prescriptions:print' prescription.id %}" 
-                       class="btn btn-outline-primary" target="_blank">
-                        <i class="fas fa-print"></i> Print Prescription
-                    </a>
-                    
-                    {% if prescription.status == 'draft' %}
-                        <form method="post" action="{% url 'prescriptions:update_status' prescription.id %}" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="status" value="active">
-                            <button type="submit" class="btn btn-success w-100">
-                                <i class="fas fa-check"></i> Activate Prescription
+                    {% if user_role == 'patient' %}
+                        <a href="{% url 'prescriptions:print' prescription.id %}"
+                           class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-print"></i> Print Prescription
+                        </a>
+                        <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    {% else %}
+                        <a href="{% url 'prescriptions:print' prescription.id %}"
+                           class="btn btn-outline-primary" target="_blank">
+                            <i class="fas fa-print"></i> Print Prescription
+                        </a>
+
+                        {% if prescription.status == 'draft' %}
+                            <form method="post" action="{% url 'prescriptions:update_status' prescription.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="active">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check"></i> Activate Prescription
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if prescription.status == 'active' %}
+                            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#dispenseModal">
+                                <i class="fas fa-pills"></i> Mark as Dispensed
                             </button>
-                        </form>
-                    {% endif %}
-                    
-                    {% if prescription.status == 'active' %}
-                        <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#dispenseModal">
-                            <i class="fas fa-pills"></i> Mark as Dispensed
-                        </button>
-                    {% endif %}
-                    
-                    {% if prescription.status == 'dispensed' %}
-                        <form method="post" action="{% url 'prescriptions:update_status' prescription.id %}" class="d-inline">
-                            {% csrf_token %}
-                            <input type="hidden" name="status" value="completed">
-                            <button type="submit" class="btn btn-success w-100">
-                                <i class="fas fa-check-circle"></i> Mark as Completed
+                        {% endif %}
+
+                        {% if prescription.status == 'dispensed' %}
+                            <form method="post" action="{% url 'prescriptions:update_status' prescription.id %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="btn btn-success w-100">
+                                    <i class="fas fa-check-circle"></i> Mark as Completed
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if prescription.status != 'cancelled' and prescription.status != 'completed' %}
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                                <i class="fas fa-times"></i> Cancel Prescription
                             </button>
-                        </form>
+                        {% endif %}
+
+                        <hr>
+
+                        <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
                     {% endif %}
-                    
-                    {% if prescription.status != 'cancelled' and prescription.status != 'completed' %}
-                        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
-                            <i class="fas fa-times"></i> Cancel Prescription
-                        </button>
-                    {% endif %}
-                    
-                    <hr>
-                    
-                    <a href="{% url 'prescriptions:list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> Back to List
-                    </a>
                 </div>
             </div>
 

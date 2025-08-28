@@ -28,16 +28,18 @@ class DashboardView(View):
         }
         
         # Get dashboard data from API
-        try:
-            dashboard_response = api_client.get_dashboard_data(token)
-            
-            if dashboard_response.get('success'):
-                context['dashboard_data'] = dashboard_response.get('data', {})
-            else:
-                messages.warning(request, 'Unable to load dashboard data.')
-                context['dashboard_data'] = {}
-        except Exception as e:
-            logger.error(f"Error loading dashboard data: {str(e)}")
+        context['dashboard_data'] = {}
+        if user_role == 'admin':
+            try:
+                dashboard_response = api_client.get_dashboard_data(token)
+
+                if dashboard_response.get('success'):
+                    context['dashboard_data'] = dashboard_response.get('data', {})
+                else:
+                    messages.warning(request, 'Unable to load dashboard data.')
+            except Exception as e:
+                logger.error(f"Error loading dashboard data: {str(e)}")
+        else:
             context['dashboard_data'] = {}
         
         # Role-specific data

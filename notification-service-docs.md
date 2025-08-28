@@ -1,8 +1,3 @@
----
-type: "agent_requested"
-description: "# Notification Service Documentation"
----
-
 # Notification Service Documentation
 
 ## 1. Overview

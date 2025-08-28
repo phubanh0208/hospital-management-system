@@ -5,112 +5,84 @@
 
 {% block extra_css %}
 <style>
-    .schedule-header {
-        background: linear-gradient(135deg, #007bff 0%, #6610f2 100%);
+    .appointments-header {
+        background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
         color: white;
         padding: 2rem;
         border-radius: 10px;
         margin-bottom: 2rem;
     }
-    
-    .schedule-card {
-        background: white;
+
+    .appointment-card {
+        background: var(--surface-card);
         border-radius: 10px;
         padding: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-    }
-    
-    .appointment-item {
-        background: #f8f9fa;
-        border-left: 4px solid #007bff;
-        border-radius: 0 8px 8px 0;
-        padding: 1rem;
+        box-shadow: var(--shadow-md);
         margin-bottom: 1rem;
+        border-left: 4px solid var(--brand-primary);
         transition: all 0.3s ease;
     }
-    
-    .appointment-item:hover {
-        background: #e9ecef;
-        transform: translateX(5px);
+
+    .appointment-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
     }
-    
-    .appointment-time {
+
+    .appointment-number {
         font-weight: bold;
-        color: #007bff;
+        color: var(--brand-primary);
         font-size: 1.1rem;
     }
-    
-    .appointment-patient {
+
+    .patient-info {
         font-weight: 600;
         margin-bottom: 0.5rem;
     }
-    
-    .appointment-type {
-        background: #e9ecef;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        display: inline-block;
+
+    .doctor-info {
+        color: var(--text-secondary);
+        margin-bottom: 0.5rem;
     }
-    
+
+    .appointment-datetime {
+        background: var(--surface-page);
+        padding: 0.5rem;
+        border-radius: 5px;
+        font-weight: 500;
+    }
+
     .status-badge {
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: bold;
     }
-    
-    .status-scheduled {
-        background: #cce5ff;
-        color: #004085;
+
+    .status-scheduled { background: rgba(30, 144, 255, 0.12); color: #1e90ff; }
+    .status-confirmed { background: rgba(32, 201, 151, 0.12); color: #20c997; }
+    .status-completed { background: rgba(108, 117, 125, 0.12); color: #6c757d; }
+    .status-cancelled { background: rgba(255, 71, 87, 0.12); color: #ff4757; }
+
+    .filter-card {
+        background: var(--surface-card);
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: 2rem;
     }
-    
-    .status-completed {
-        background: #d4edda;
-        color: #155724;
-    }
-    
-    .status-cancelled {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    
+
     .no-appointments {
         text-align: center;
         padding: 3rem;
-        color: #6c757d;
+        color: var(--text-secondary);
     }
-    
-    .date-filter {
-        background: white;
+
+    .stats-card {
+        background: var(--surface-card);
         border-radius: 10px;
         padding: 1rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 1.5rem;
-    }
-    
-    .calendar-view {
-        background: white;
-        border-radius: 10px;
-        padding: 1rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .day-slot {
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        min-height: 60px;
-    }
-    
-    .day-header {
-        font-weight: bold;
-        background: #f8f9fa;
-        padding: 0.5rem;
-        border-radius: 5px 5px 0 0;
-        border-bottom: 1px solid #dee2e6;
+        box-shadow: var(--shadow-sm);
+        text-align: center;
     }
 </style>
 {% endblock %}
@@ -121,307 +93,144 @@
     {% if error_message %}
         <div class="alert alert-warning alert-dismissible fade show" role="alert">
             <i class="fas fa-exclamation-triangle"></i> {{ error_message }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     {% endif %}
 
-    <!-- Schedule Header -->
-    <div class="schedule-header">
+    <!-- Header -->
+    <div class="appointments-header">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h2 class="mb-2">
-                    <i class="fas fa-calendar"></i> 
-                    Doctor Schedule
-                </h2>
-                <p class="mb-1">{{ doctor.fullName }} - {{ doctor.specialization }}</p>
-                <p class="mb-0">View and manage appointment schedule</p>
+                <h2 class="mb-2"><i class="fas fa-calendar-check"></i> Doctor Schedule</h2>
+                <p class="mb-1">Viewing schedule for <strong>Dr. {{ doctor.fullName }}</strong></p>
+                <p class="mb-0">Total Appointments: {{ pagination.totalCount|default:0 }}</p>
             </div>
             <div class="col-md-4 text-right">
                 <a href="{% url 'doctors:detail' doctor.id %}" class="btn btn-light mr-2">
                     <i class="fas fa-user"></i> Doctor Profile
                 </a>
-                <a href="{% url 'doctors:list' %}" class="btn btn-outline-light">
-                    <i class="fas fa-arrow-left"></i> Back to List
+                <a href="{% url 'appointments:book' %}?doctor={{ doctor.id }}" class="btn btn-outline-light">
+                    <i class="fas fa-plus"></i> Book Appointment
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- Date Filter -->
-    <div class="date-filter">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h6 class="mb-0">
-                    <i class="fas fa-filter"></i> Filter Schedule
-                </h6>
-            </div>
-            <div class="col-md-6">
-                <div class="row">
-                    <div class="col-md-6">
-                        <input type="date" class="form-control" id="dateFrom" value="{{ request.GET.dateFrom }}">
-                    </div>
-                    <div class="col-md-6">
-                        <input type="date" class="form-control" id="dateTo" value="{{ request.GET.dateTo }}">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="row">
-        <div class="col-md-8">
-            <div class="schedule-card">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clock"></i> Upcoming Appointments
-                    </h5>
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-primary active" onclick="showListView()">
-                            <i class="fas fa-list"></i> List
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" onclick="showCalendarView()">
-                            <i class="fas fa-calendar-alt"></i> Calendar
-                        </button>
+        <div class="col-md-9">
+            <!-- Filters -->
+            <div class="filter-card">
+                <h6 class="mb-3"><i class="fas fa-filter"></i> Filter Appointments</h6>
+                <form method="GET" class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-control">
+                            <option value="">All Status</option>
+                            {% for value, label in status_choices %}
+                                <option value="{{ value }}" {% if current_filters.status == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                </div>
-                
-                <div id="listView">
-                    {% if schedule %}
-                        {% for appointment in schedule %}
-                            <div class="appointment-item">
-                                <div class="row align-items-center">
-                                    <div class="col-md-3">
-                                        <div class="appointment-time">
-                                            {{ appointment.date|default:"Today" }}
-                                            <br>
-                                            <small>{{ appointment.time|default:"10:00 AM" }}</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="appointment-patient">
-                                            {{ appointment.patientName|default:"Patient Name" }}
-                                        </div>
-                                        <small class="text-muted">
-                                            ID: {{ appointment.patientId|default:"P001"|slice:":8" }}...
-                                        </small>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <span class="appointment-type">
-                                            {{ appointment.type|default:"Consultation" }}
-                                        </span>
-                                        <br>
-                                        <small class="text-muted">
-                                            Duration: {{ appointment.duration|default:"30" }} min
-                                        </small>
-                                    </div>
-                                    <div class="col-md-2 text-right">
-                                        <span class="status-badge status-{{ appointment.status|default:'scheduled' }}">
-                                            {{ appointment.status|default:"Scheduled"|title }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="no-appointments">
-                            <i class="fas fa-calendar-times fa-3x mb-3 text-muted"></i>
-                            <h5>No Appointments Scheduled</h5>
-                            <p class="text-muted">No appointments found for the selected date range.</p>
-                            <button class="btn btn-primary" onclick="bookAppointment()">
-                                <i class="fas fa-plus"></i> Book New Appointment
-                            </button>
-                        </div>
-                    {% endif %}
-                </div>
-                
-                <div id="calendarView" style="display: none;">
-                    <div class="calendar-view">
-                        <div class="row">
-                            <div class="col">
-                                <div class="day-header">Monday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="day-header">Tuesday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="day-header">Wednesday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="day-header">Thursday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="day-header">Friday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="day-header">Saturday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="day-header">Sunday</div>
-                                <div class="day-slot">
-                                    <small class="text-muted">No appointments</small>
-                                </div>
-                            </div>
+                    <div class="col-md-3">
+                        <label class="form-label">From Date</label>
+                        <input type="date" name="date_from" class="form-control" value="{{ current_filters.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">To Date</label>
+                        <input type="date" name="date_to" class="form-control" value="{{ current_filters.date_to }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Filter</button>
+                            <a href="{% url 'doctors:schedule' doctor.id %}" class="btn btn-outline-secondary"><i class="fas fa-times"></i> Clear</a>
                         </div>
                     </div>
-                </div>
+                </form>
             </div>
+
+            <!-- Appointments List -->
+            {% if schedule %}
+                {% for appointment in schedule %}
+                    <div class="appointment-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <div class="appointment-number">{{ appointment.appointment_number|default:"N/A" }}</div>
+                                <div class="patient-info"><i class="fas fa-user"></i> {{ appointment.patient_name|default:"Unknown Patient" }}</div>
+                                <small class="text-muted">{{ appointment.patient_phone|default:"" }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="doctor-info"><i class="fas fa-user-md"></i> Dr. {{ appointment.doctor_name|default:doctor.fullName }}</div>
+                                <small class="text-muted">{{ appointment.appointment_type|default:"consultation"|title }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="appointment-datetime">
+                                    <i class="fas fa-clock"></i>
+                                    {% if appointment.scheduled_date %}
+                                        {{ appointment.scheduled_date|date:"M d, Y" }}<br>
+                                        <small>{{ appointment.scheduled_date|date:"g:i A" }}</small>
+                                    {% else %}Not scheduled{% endif %}
+                                </div>
+                                <small class="text-muted">Duration: {{ appointment.duration_minutes|default:"30" }} min</small>
+                            </div>
+                            <div class="col-md-3 text-right">
+                                <span class="status-badge status-{{ appointment.status|default:'scheduled' }}">{{ appointment.status|default:"Scheduled"|title }}</span>
+                                <div class="mt-2">
+                                    <a href="{% url 'appointments:detail' appointment.id %}" class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i> View</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+
+                <!-- Pagination -->
+                {% if pagination.totalPages > 1 %}
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            {% if pagination.hasPrev %}
+                                <li class="page-item"><a class="page-link" href="?page={{ pagination.currentPage|add:'-1' }}">Previous</a></li>
+                            {% endif %}
+                            <li class="page-item active"><span class="page-link">{{ pagination.currentPage }} of {{ pagination.totalPages }}</span></li>
+                            {% if pagination.hasNext %}
+                                <li class="page-item"><a class="page-link" href="?page={{ pagination.currentPage|add:'1' }}">Next</a></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            {% else %}
+                <div class="no-appointments">
+                    <i class="fas fa-calendar-times fa-3x mb-3 text-muted"></i>
+                    <h5>No Appointments Found</h5>
+                    <p class="text-muted">No appointments match your current filters for this doctor.</p>
+                    <a href="{% url 'appointments:book' %}?doctor={{ doctor.id }}" class="btn btn-success"><i class="fas fa-plus"></i> Book First Appointment</a>
+                </div>
+            {% endif %}
         </div>
-        
-        <div class="col-md-4">
-            <!-- Schedule Stats -->
-            <div class="schedule-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-chart-bar"></i> Schedule Stats
-                </h5>
-                
+
+        <div class="col-md-3">
+            <!-- Quick Stats -->
+            <div class="stats-card mb-3">
+                <h6 class="mb-2"><i class="fas fa-chart-bar text-success"></i> Quick Stats</h6>
                 <div class="row text-center">
                     <div class="col-6">
-                        <div class="p-2">
-                            <h4 class="text-primary">{{ schedule|length }}</h4>
-                            <small>Total Appointments</small>
-                        </div>
+                        <h4 class="text-primary">{{ pagination.totalCount|default:0 }}</h4>
+                        <small>Total</small>
                     </div>
                     <div class="col-6">
-                        <div class="p-2">
-                            <h4 class="text-success">0</h4>
-                            <small>Completed Today</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-2">
-                            <h4 class="text-warning">0</h4>
-                            <small>Pending</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="p-2">
-                            <h4 class="text-danger">0</h4>
-                            <small>Cancelled</small>
-                        </div>
+                        <h4 class="text-success">0</h4>
+                        <small>Today</small>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Quick Actions -->
-            <div class="schedule-card">
-                <h5 class="mb-3">
-                    <i class="fas fa-tools"></i> Quick Actions
-                </h5>
-                
+            <div class="stats-card mb-3">
+                <h6 class="mb-3"><i class="fas fa-tools text-success"></i> Quick Actions</h6>
                 <div class="d-grid gap-2">
-                    <button class="btn btn-success" onclick="bookAppointment()">
-                        <i class="fas fa-plus"></i> Book Appointment
-                    </button>
-                    <a href="{% url 'doctors:availability' doctor.id %}" class="btn btn-info">
-                        <i class="fas fa-calendar-check"></i> Manage Availability
-                    </a>
-                    <button class="btn btn-warning" onclick="exportSchedule()">
-                        <i class="fas fa-download"></i> Export Schedule
-                    </button>
-                    <button class="btn btn-primary" onclick="printSchedule()">
-                        <i class="fas fa-print"></i> Print Schedule
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Today's Summary -->
-            <div class="schedule-card">
-                <h6 class="mb-2">
-                    <i class="fas fa-calendar-day text-primary"></i> Today's Summary
-                </h6>
-                <div class="small">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span>First Appointment:</span>
-                        <strong>9:00 AM</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span>Last Appointment:</span>
-                        <strong>5:00 PM</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span>Total Patients:</span>
-                        <strong>{{ schedule|length }}</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Available Slots:</span>
-                        <strong class="text-success">3</strong>
-                    </div>
+                    <a href="{% url 'appointments:book' %}?doctor={{ doctor.id }}" class="btn btn-success"><i class="fas fa-plus"></i> Book Appointment</a>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function showListView() {
-    document.getElementById('listView').style.display = 'block';
-    document.getElementById('calendarView').style.display = 'none';
-    
-    // Update button states
-    document.querySelector('[onclick="showListView()"]').classList.add('active');
-    document.querySelector('[onclick="showCalendarView()"]').classList.remove('active');
-}
-
-function showCalendarView() {
-    document.getElementById('listView').style.display = 'none';
-    document.getElementById('calendarView').style.display = 'block';
-    
-    // Update button states
-    document.querySelector('[onclick="showListView()"]').classList.remove('active');
-    document.querySelector('[onclick="showCalendarView()"]').classList.add('active');
-}
-
-function bookAppointment() {
-    window.location.href = '/appointments/book/?doctor={{ doctor.id }}';
-}
-
-function exportSchedule() {
-    alert('Export Schedule feature will be implemented in the next phase.');
-}
-
-function printSchedule() {
-    window.print();
-}
-
-// Date filter functionality
-document.getElementById('dateFrom').addEventListener('change', function() {
-    updateScheduleFilter();
-});
-
-document.getElementById('dateTo').addEventListener('change', function() {
-    updateScheduleFilter();
-});
-
-function updateScheduleFilter() {
-    const dateFrom = document.getElementById('dateFrom').value;
-    const dateTo = document.getElementById('dateTo').value;
-    
-    if (dateFrom && dateTo) {
-        const url = new URL(window.location);
-        url.searchParams.set('dateFrom', dateFrom);
-        url.searchParams.set('dateTo', dateTo);
-        window.location.href = url.toString();
-    }
-}
-</script>
 {% endblock %}

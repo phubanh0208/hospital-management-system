@@ -16,8 +16,8 @@ import { ZodError } from 'zod';
 export class MessageHandler {
   private notificationService: NotificationService;
 
-  constructor() {
-    this.notificationService = new NotificationService();
+  constructor(notificationService: NotificationService) {
+    this.notificationService = notificationService;
   }
 
   public validateMessage(message: unknown): message is RabbitMQMessage {

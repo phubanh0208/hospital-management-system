@@ -79,8 +79,8 @@ class DoctorListView(View):
                 # Set isActive based on isAcceptingPatients
                 doctor['isActive'] = doctor.get('isAcceptingPatients', True)
 
-                # Add appointment count (placeholder for now)
-                doctor['appointment_count'] = 0
+                # Use the actual appointment count from the API response
+                doctor['appointment_count'] = doctor.get('totalAppointments', 0)
 
             # Format pagination for template
             pagination = {
@@ -468,77 +468,86 @@ class DoctorAvailabilityView(View):
 
 @method_decorator(login_required, name='dispatch')
 class DoctorScheduleView(View):
-    """View doctor schedule and appointments"""
+    """View doctor schedule and appointments, mimicking AppointmentListView"""
 
     def get(self, request, doctor_id):
         try:
-            api_client = APIClient()
             token = request.session.get('access_token')
-            
-            # Create doctor info from doctor_id
-            doctor = {
-                'id': doctor_id,
-                'fullName': f"Doctor {doctor_id[:8]}",
-                'email': f"doctor{doctor_id[:8]}@hospital.com",
-                'username': f"doctor_{doctor_id[:8]}",
-                'role': 'doctor',
-                'specialization': 'General Medicine'
-            }
-            
-            # Get date filter with defaults
-            from datetime import datetime, timedelta
-            today = datetime.now().date()
+            api_client = APIClient(token=token)
 
-            date_filter = request.GET.get('date', '')
-            date_from = request.GET.get('dateFrom', today.strftime('%Y-%m-%d'))
-            date_to = request.GET.get('dateTo', (today + timedelta(days=30)).strftime('%Y-%m-%d'))
+            # 1. Get Doctor's Info
+            doctor_resp = api_client.get_direct(f'http://localhost:3001/api/users/{doctor_id}')
+            if doctor_resp and doctor_resp.get('success'):
+                doctor = doctor_resp.get('data', {})
+                doctor['fullName'] = doctor.get('fullName') or doctor.get('username', f'Doctor {doctor_id[:8]}')
+            else:
+                doctor = {'id': doctor_id, 'fullName': f'Doctor {doctor_id[:8]}', 'specialization': 'N/A'}
 
-            # Get doctor schedule with required date parameters
+            # 2. Get Filters and Pagination from Request
+            page = int(request.GET.get('page', 1))
+            limit = 10
+            status = request.GET.get('status', '')
+            date_from = request.GET.get('date_from', '')
+            date_to = request.GET.get('date_to', '')
+
+            # 3. Build API Query Parameters
             params = {
-                'dateFrom': date_from,
-                'dateTo': date_to
+                'page': page,
+                'limit': limit,
+                'doctorId': doctor_id  # Always filter by this doctor
             }
-            if date_filter:
-                params['date'] = date_filter
+            if status: params['status'] = status
+            if date_from: params['dateFrom'] = date_from
+            if date_to: params['dateTo'] = date_to
 
-            query_string = '&'.join([f"{k}={v}" for k, v in params.items()])
-            endpoint = f'/api/appointments/doctor/{doctor_id}/schedule?{query_string}'
-            
-            schedule_response = api_client._make_request('GET', endpoint, token=token)
-            
-            schedule = []
-            if schedule_response.get('success'):
-                schedule = schedule_response.get('data', [])
-            
+            # 4. Get Appointments from API
+            logger.info(f"Fetching schedule for doctor {doctor_id} with params: {params}")
+            appointments_response = api_client.get_direct('http://localhost:3003/api/appointments', params=params)
+
+            schedule, pagination = [], {}
+            if appointments_response and appointments_response.get('success'):
+                data = appointments_response.get('data', {})
+                schedule = data.get('appointments', [])
+                pagination = data.get('pagination', {})
+                logger.info(f"Found {len(schedule)} appointments for doctor {doctor_id}")
+
+                # 5. Parse Dates
+                from datetime import datetime
+                for appt in schedule:
+                    dt = appt.get('scheduled_date') or appt.get('scheduledDate')
+                    if isinstance(dt, str) and dt:
+                        try:
+                            if dt.endswith('Z'): dt = dt[:-1]
+                            appt['scheduled_date'] = datetime.fromisoformat(dt)
+                        except Exception: pass
+
+            # 6. Prepare Context
             context = {
                 'doctor': doctor,
                 'schedule': schedule,
-                'date_filter': date_filter
+                'pagination': pagination,
+                'current_filters': {
+                    'date_from': date_from,
+                    'date_to': date_to,
+                    'status': status,
+                },
+                'status_choices': [
+                    ('scheduled', 'Scheduled'),
+                    ('confirmed', 'Confirmed'),
+                    ('completed', 'Completed'),
+                    ('cancelled', 'Cancelled'),
+                ]
             }
-            
             return render(request, 'doctors/schedule.html', context)
-            
+
         except Exception as e:
             logger.error(f"Error loading doctor schedule {doctor_id}: {str(e)}")
-
-            # Create fallback doctor data
-            doctor = {
-                'id': doctor_id,
-                'fullName': f"Doctor {doctor_id[:8]}",
-                'email': f"doctor{doctor_id[:8]}@hospital.com",
-                'username': f"doctor_{doctor_id[:8]}",
-                'role': 'doctor',
-                'specialization': 'General Medicine'
-            }
-
-            context = {
-                'doctor': doctor,
+            messages.error(request, "An error occurred while loading the doctor's schedule.")
+            return render(request, 'doctors/schedule.html', {
+                'doctor': {'id': doctor_id, 'fullName': f'Doctor {doctor_id[:8]}'},
                 'schedule': [],
-                'date_filter': request.GET.get('date', ''),
-                'error_message': "Doctor schedule information could not be loaded. Please try again later."
-            }
-
-            return render(request, 'doctors/schedule.html', context)
+                'pagination': {}
+            })
 
 class DoctorSearchAPIView(View):
     """API endpoint for doctor search - Public endpoint"""

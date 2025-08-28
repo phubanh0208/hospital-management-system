@@ -24,7 +24,7 @@ export class RabbitMQConnection {
 
     try {
       const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
-      
+
       this.connection = await amqp.connect(rabbitmqUrl);
       this.channel = await this.connection.createChannel();
 
@@ -35,6 +35,17 @@ export class RabbitMQConnection {
             const dlq = process.env.NOTIFICATION_DLQ || 'notification_queue_dlq_v2';
 
       await this.channel.assertExchange(exchange, 'topic', { durable: true });
+
+
+      // Assert delayed exchange for appointment reminders
+      const delayedExchange = process.env.DELAYED_EXCHANGE || 'hospital_notifications_delayed';
+      await this.channel.assertExchange(delayedExchange, 'x-delayed-message', {
+        durable: true,
+        arguments: { 'x-delayed-type': 'direct' },
+      });
+
+      // Bind the main queue to the delayed exchange
+      await this.channel.bindQueue(queue, delayedExchange, 'appointment.reminder');
 
       // Assert Dead Letter Exchange and Queue
       await this.channel.assertExchange(dlx, 'fanout', { durable: true });

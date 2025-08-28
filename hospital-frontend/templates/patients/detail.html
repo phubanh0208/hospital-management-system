@@ -263,16 +263,13 @@
                                 <i class="fas fa-calendar-plus"></i> Book Appointment
                             </a>
                         </div>
+                        {% if user_role == 'doctor' %}
                         <div class="col-md-3 mb-2">
                             <a href="{% url 'prescriptions:create' %}?patient_id={{ patient.id }}" class="btn btn-outline-success btn-sm w-100">
                                 <i class="fas fa-prescription"></i> New Prescription
                             </a>
                         </div>
-                        <div class="col-md-3 mb-2">
-                            <button class="btn btn-outline-info btn-sm w-100" disabled>
-                                <i class="fas fa-flask"></i> Lab Test
-                            </button>
-                        </div>
+                        {% endif %}
                         <div class="col-md-3 mb-2">
                             <button class="btn btn-outline-warning btn-sm w-100" onclick="addMedicalHistory()">
                                 <i class="fas fa-plus"></i> Add History
@@ -281,7 +278,7 @@
                     </div>
                     <small class="text-muted">
                         <i class="fas fa-info-circle me-1"></i>
-                        Click on stats above to view related records. Lab Test feature coming soon...
+                        Click on stats above to view related records.
                     </small>
                 </div>
             </div>

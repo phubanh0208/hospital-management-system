@@ -248,6 +248,68 @@ class RabbitMQService {
     }
   }
 
+
+  public async publishDelayedMessage(routingKey: string, message: any, delay: number, options: MessageOptions = {}): Promise<boolean> {
+    if (!this.channel) {
+      logger.warn('RabbitMQ channel not available, attempting to reconnect...');
+      await this.connect();
+
+      if (!this.channel) {
+        throw new Error('Failed to establish RabbitMQ connection');
+      }
+    }
+
+    try {
+      const delayedExchange = process.env.DELAYED_EXCHANGE || 'hospital_notifications_delayed';
+
+      const fullMessage = {
+        ...message,
+        id: message.id || this.generateMessageId(),
+        timestamp: new Date().toISOString(),
+        source: process.env.SERVICE_NAME || 'unknown-service',
+        headers: {
+          'x-delay': delay,
+          'x-retry-count': 0,
+          'x-original-routing-key': routingKey,
+          ...(message.headers || {}),
+          ...(options.headers || {})
+        }
+      };
+
+      const messageBuffer = Buffer.from(JSON.stringify(fullMessage));
+
+      const publishOptions: amqp.Options.Publish = {
+        persistent: options.persistent ?? true,
+        timestamp: Date.now(),
+        messageId: this.generateMessageId(),
+        headers: { 'x-delay': delay },
+        ...options
+      };
+
+      const success = this.channel.publish(
+        delayedExchange,
+        routingKey,
+        messageBuffer,
+        publishOptions
+      );
+
+      if (success) {
+        logger.info('Delayed message published successfully', {
+          routingKey,
+          delay,
+          messageId: publishOptions.messageId
+        });
+        return true;
+      } else {
+        logger.warn('Delayed message could not be published (channel buffer full)', { routingKey });
+        return false;
+      }
+
+    } catch (error) {
+      logger.error('Error publishing delayed message to RabbitMQ:', error);
+      throw error;
+    }
+  }
   /**
    * Consume messages from a queue with proper error handling
    */
@@ -462,6 +524,15 @@ export const publishToRabbitMQ = async (routingKey: string, message: any, option
     await rabbitMQService.publishMessage(routingKey, message, options);
   } catch (error) {
     logger.error('Failed to publish message to RabbitMQ:', error);
+    throw error;
+  }
+};
+
+export const publishDelayedMessageToRabbitMQ = async (routingKey: string, message: any, delay: number, options?: MessageOptions): Promise<void> => {
+  try {
+    await rabbitMQService.publishDelayedMessage(routingKey, message, delay, options);
+  } catch (error) {
+    logger.error('Failed to publish delayed message to RabbitMQ:', error);
     throw error;
   }
 };

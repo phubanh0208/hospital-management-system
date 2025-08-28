@@ -83,13 +83,13 @@ export class NotificationService {
   }
 
   public async sendNotification(
-    notificationId: string, 
-    templateName?: string, 
+    notificationId: string,
+    templateName?: string,
     templateVariables?: Record<string, any>
   ): Promise<void> {
     try {
       const notification = await Notification.findById(notificationId);
-      
+
       if (!notification) {
         throw new Error(`Notification not found: ${notificationId}`);
       }
@@ -100,7 +100,7 @@ export class NotificationService {
       }
 
       // Send via each channel
-      const sendPromises = notification.channels.map(channel => 
+      const sendPromises = notification.channels.map(channel =>
         this.sendViaChannelInternal(notification, channel, templateName, templateVariables)
       );
 
@@ -118,12 +118,12 @@ export class NotificationService {
 
     } catch (error) {
       logger.error('Error sending notification:', error);
-      
+
       // Update notification status to failed
       await Notification.findByIdAndUpdate(notificationId, {
         status: 'failed'
       });
-      
+
       throw error;
     }
   }
@@ -153,26 +153,26 @@ export class NotificationService {
           provider = 'nodemailer';
           recipient = await this.getUserEmail(notification.recipient_user_id) || 'unknown';
           break;
-        
+
         case 'sms':
           success = await this.sendSMSNotification(notification, templateName, templateVariables);
           provider = 'twilio';
           recipient = await this.getUserPhone(notification.recipient_user_id) || 'unknown';
           break;
-        
+
         case 'web':
           success = await this.sendWebSocketNotification(notification);
           provider = 'websocket';
           recipient = notification.recipient_user_id;
           break;
-        
+
         case 'push':
           // Push notifications - to be implemented
           success = false;
           provider = 'push-service';
           recipient = notification.recipient_user_id;
           break;
-        
+
         default:
           throw new Error(`Unsupported channel: ${channel}`);
       }
@@ -198,20 +198,20 @@ export class NotificationService {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       deliveryLog.status = 'failed';
       deliveryLog.error_message = errorMessage;
-      
+
       logger.error(`Failed to send notification via ${channel}:`, error);
 
       // Schedule retry for failed deliveries (except for WebSocket)
       if (channel !== 'web') {
         try {
-          const recipient = channel === 'email' 
+          const recipient = channel === 'email'
             ? await this.getUserEmail(notification.recipient_user_id) || 'unknown'
             : channel === 'sms'
             ? await this.getUserPhone(notification.recipient_user_id) || 'unknown'
             : notification.recipient_user_id;
 
-          const provider = channel === 'email' ? 'nodemailer' 
-            : channel === 'sms' ? 'twilio' 
+          const provider = channel === 'email' ? 'nodemailer'
+            : channel === 'sms' ? 'twilio'
             : channel === 'push' ? 'push-service'
             : 'unknown';
 
@@ -327,24 +327,24 @@ export class NotificationService {
         timestamp: notification.created_at
       };
 
-      const success = await this.webSocketService.sendNotificationToUser(
-        notification.recipient_user_id,
-        webSocketNotification
-      );
-
-      if (success) {
+      if (this.webSocketService.isUserConnected(notification.recipient_user_id)) {
+        this.webSocketService.broadcastToUser(
+          notification.recipient_user_id,
+          webSocketNotification
+        );
         logger.info('WebSocket notification sent', {
           userId: notification.recipient_user_id,
           notificationId: notification.id
         });
       } else {
-        logger.warn('WebSocket notification failed - user not connected', {
+        logger.warn('WebSocket notification not sent - user not connected', {
           userId: notification.recipient_user_id,
           notificationId: notification.id
         });
       }
 
       // Return true even if user is not connected, as the notification is still valid
+      // and has been logged. The delivery attempt was made.
       return true;
 
     } catch (error) {
@@ -374,7 +374,7 @@ export class NotificationService {
       const skip = (page - 1) * limit;
 
       const query: any = { recipient_user_id: userId };
-      
+
       if (filters?.status) query.status = filters.status;
       if (filters?.type) query.type = filters.type;
       if (filters?.priority) query.priority = filters.priority;
@@ -398,12 +398,21 @@ export class NotificationService {
       throw error;
     }
   }
+  public async getNotificationById(notificationId: string): Promise<INotification | null> {
+    try {
+      return await Notification.findById(notificationId);
+    } catch (error) {
+      logger.error('Error fetching notification by ID:', error);
+      throw error;
+    }
+  }
+
 
   public async markAsRead(notificationId: string, userId: string): Promise<boolean> {
     try {
       const result = await Notification.findOneAndUpdate(
         { _id: notificationId, recipient_user_id: userId },
-        { 
+        {
           status: 'read',
           read_at: new Date()
         },
@@ -453,14 +462,14 @@ export class NotificationService {
   }
 
   private getDefaultChannels(
-    type: string, 
+    type: string,
     preferences: INotificationPreferences | null
   ): ('web' | 'email' | 'sms' | 'push')[] {
     const defaultChannels: ('web' | 'email' | 'sms' | 'push')[] = ['web'];
 
     // SMS is currently disabled globally - can be enabled in future
     const smsEnabled = process.env.SMS_ENABLED === 'true' || false;
-    
+
     if (!preferences) {
       // For appointment and prescription types, always include email even without preferences
       if (type === 'appointment' || type === 'prescription') {
@@ -596,8 +605,8 @@ export class NotificationService {
 
       // Queue for async processing
       await this.queueNotificationForSending(
-        notification.id, 
-        data.template_name, 
+        notification.id,
+        data.template_name,
         data.template_variables
       );
 
@@ -794,16 +803,16 @@ export class NotificationService {
             subject: title,
             html: message
           });
-        
+
         case 'sms':
           return await this.smsService.sendSMS(recipient, message);
-        
+
         case 'web':
           if (!this.webSocketService) {
             logger.warn('WebSocket service not available for retry');
             return false;
           }
-          
+
           // For web notifications, recipient is the user ID
           const webNotification = {
             id: `retry-${Date.now()}`,
@@ -815,9 +824,13 @@ export class NotificationService {
             metadata: {},
             timestamp: new Date()
           };
-          
-          return await this.webSocketService.sendNotificationToUser(recipient, webNotification);
-        
+
+          if (this.webSocketService.isUserConnected(recipient)) {
+            this.webSocketService.broadcastToUser(recipient, webNotification);
+            return true;
+          }
+          return false; // User not connected
+
         default:
           logger.warn('Unsupported channel for retry', { channel });
           return false;

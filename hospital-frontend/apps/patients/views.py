@@ -168,72 +168,94 @@ class PatientCreateView(View):
                 'createdByUserId': user_id,
             }
 
-            # Create patient
+            # Determine if we should create an Auth account and unify IDs
+            create_account = request.POST.get('createAccount') == 'on'
+            account_created = False
+            username = request.POST.get('username', '').strip() if create_account else ''
+
+            if create_account:
+                try:
+                    password = request.POST.get('password', '').strip()
+                    send_credentials = request.POST.get('sendCredentials') == 'on'
+
+                    # Split full name into first and last name for profile
+                    name_parts = patient_data['fullName'].split(' ', 1)
+                    first_name = name_parts[0] if name_parts else ''
+                    last_name = name_parts[1] if len(name_parts) > 1 else ''
+
+                    if username and password and patient_data.get('email'):
+                        account_data = {
+                            'username': username,
+                            'email': patient_data['email'],
+                            'password': password,
+                            'role': 'patient',
+                            'profile': {
+                                'firstName': first_name,
+                                'lastName': last_name,
+                                'phone': patient_data.get('phone', ''),
+                                'dateOfBirth': patient_data.get('dateOfBirth'),
+                                'address': f"{patient_data['address']['street']}, {patient_data['address']['ward']}, {patient_data['address']['district']}, {patient_data['address']['city']}",
+                                'avatarUrl': ''
+                            }
+                        }
+
+                        # 1) Create Auth user first to get user ID
+                        account_response = api_client.register(account_data)
+                        if not account_response.get('success'):
+                            logger.error(f"Failed to create account for patient: {account_response.get('message')}")
+                            messages.error(request, f"Failed to create account: {account_response.get('message')}")
+                            return render(request, 'patients/create.html', {'form_data': request.POST})
+
+                        account_created = True
+                        logger.info(f"Account created for patient {patient_data['fullName']} with username {username}")
+
+                        # Extract created user ID from response
+                        account_data_resp = account_response.get('data', {}) or {}
+                        new_user_id = account_data_resp.get('id') or account_data_resp.get('user', {}).get('id')
+                        if not new_user_id:
+                            # As a fallback, try to login and read user id (not ideal, but safe)
+                            logger.warning('Account response missing user id; cannot unify IDs without it')
+                        else:
+                            # 2) Create patient with the SAME ID as Auth user
+                            patient_data_with_id = dict(patient_data)
+                            patient_data_with_id['id'] = new_user_id
+                            response = api_client.create_patient(token=token, patient_data=patient_data_with_id)
+
+                            if response.get('success'):
+                                patient = response.get('data')
+                                patient_name = patient.get('fullName')
+                                patient_code = patient.get('patientCode')
+
+                                if send_credentials:
+                                    logger.info(f"Should send credentials to {patient_data['email']} (not implemented yet)")
+
+                                messages.success(request, f"Patient {patient_name} created successfully with code {patient_code}. Login account also created with username '{username}'.")
+                                return redirect('patients:detail', patient_id=patient.get('id'))
+                            else:
+                                # If patient creation fails, report error (optionally rollback account)
+                                error_msg = response.get('message', 'Unknown error')
+                                errors = response.get('errors', [])
+                                if errors:
+                                    error_msg += ': ' + ', '.join(errors)
+                                messages.error(request, f"Failed to create patient with unified ID: {error_msg}")
+                                return render(request, 'patients/create.html', {'form_data': request.POST})
+                    else:
+                        messages.error(request, "Username, password and email are required to create an account")
+                        return render(request, 'patients/create.html', {'form_data': request.POST})
+
+                except Exception as e:
+                    logger.error(f"Error creating account/patient with unified ID: {str(e)}")
+                    messages.error(request, "Failed to create account/patient. Please try again.")
+                    return render(request, 'patients/create.html', {'form_data': request.POST})
+
+            # Fallback: create patient only (no account)
             response = api_client.create_patient(token=token, patient_data=patient_data)
 
             if response.get('success'):
                 patient = response.get('data')
                 patient_name = patient.get('fullName')
                 patient_code = patient.get('patientCode')
-
-                # Check if user wants to create account for patient
-                create_account = request.POST.get('createAccount') == 'on'
-                account_created = False
-
-                if create_account:
-                    try:
-                        # Prepare account data from patient info
-                        username = request.POST.get('username', '').strip()
-                        password = request.POST.get('password', '').strip()
-                        send_credentials = request.POST.get('sendCredentials') == 'on'
-
-                        if username and password and patient_data.get('email'):
-                            # Split full name into first and last name
-                            name_parts = patient_name.split(' ', 1)
-                            first_name = name_parts[0] if name_parts else ''
-                            last_name = name_parts[1] if len(name_parts) > 1 else ''
-
-                            account_data = {
-                                'username': username,
-                                'email': patient_data['email'],
-                                'password': password,
-                                'role': 'patient',
-                                'profile': {
-                                    'firstName': first_name,
-                                    'lastName': last_name,
-                                    'phone': patient_data.get('phone', ''),
-                                    'dateOfBirth': patient_data.get('dateOfBirth'),
-                                    'address': f"{patient_data['address']['street']}, {patient_data['address']['ward']}, {patient_data['address']['district']}, {patient_data['address']['city']}",
-                                    'avatarUrl': ''
-                                }
-                            }
-
-                            # Create user account
-                            account_response = api_client.register(account_data)
-
-                            if account_response.get('success'):
-                                account_created = True
-                                logger.info(f"Account created for patient {patient_name} with username {username}")
-
-                                # TODO: Send credentials via email if requested
-                                if send_credentials:
-                                    logger.info(f"Should send credentials to {patient_data['email']} (not implemented yet)")
-                            else:
-                                logger.error(f"Failed to create account for patient: {account_response.get('message')}")
-                                messages.warning(request, f"Patient created successfully, but failed to create account: {account_response.get('message')}")
-                        else:
-                            messages.warning(request, "Patient created successfully, but account creation failed due to missing required fields")
-
-                    except Exception as e:
-                        logger.error(f"Error creating account for patient: {str(e)}")
-                        messages.warning(request, "Patient created successfully, but failed to create account due to an error")
-
-                # Success message
-                if account_created:
-                    messages.success(request, f"Patient {patient_name} created successfully with code {patient_code}. Login account also created with username '{username}'.")
-                else:
-                    messages.success(request, f"Patient {patient_name} created successfully with code {patient_code}")
-
+                messages.success(request, f"Patient {patient_name} created successfully with code {patient_code}")
                 return redirect('patients:detail', patient_id=patient.get('id'))
             else:
                 error_msg = response.get('message', 'Unknown error')

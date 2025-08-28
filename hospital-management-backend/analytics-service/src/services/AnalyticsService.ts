@@ -520,7 +520,7 @@ export class AnalyticsService {
   /**
    * Get admin-specific dashboard data
    */
-  async getAdminDashboard(): Promise<any> {
+  async getAdminDashboard(days: number = 30): Promise<any> {
     try {
       console.log('🚀 Starting getAdminDashboard...');
       // Use HTTP client to get data from other services

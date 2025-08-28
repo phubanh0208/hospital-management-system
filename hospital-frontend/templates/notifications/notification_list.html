@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load static patient_filters %}
+
+{% block title %}All Notifications - Hospital Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-bell text-primary"></i> All Notifications
+        </h1>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Your Notifications</h6>
+            <div class="btn-group" role="group" aria-label="Notification actions">
+                <button id="refresh-btn" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-rotate"></i> Refresh
+                </button>
+                <button id="mark-all-read-btn" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-check-double"></i> Mark all as read
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="list-group" id="notification-list-page">
+                {% if notifications %}
+                    {% for notification in notifications %}
+                        <div class="list-group-item flex-column align-items-start d-flex justify-content-between gap-3 {% if notification.status != 'read' %}list-group-item-light fw-bold{% endif %}"
+                             data-notification-id="{{ notification.id }}"
+                             data-is-read="{% if notification.status == 'read' %}true{% else %}false{% endif %}">
+                            <a href="{{ notification.url|default:'#' }}" class="text-decoration-none flex-grow-1 me-3 notification-link" style="color: inherit;">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h5 class="mb-1">{{ notification.title }}</h5>
+                                    <small class="text-muted">{{ notification.created_at|date:"Y-m-d H:i" }}</small>
+                                </div>
+                                <p class="mb-1">{{ notification.message }}</p>
+                                <small>Type: {{ notification.type }}</small>
+                            </a>
+                            <div class="d-flex align-items-start gap-2">
+                                {% if notification.status != 'read' %}
+                                <button class="btn btn-sm btn-outline-success mark-read-btn" title="Mark as read">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                                <!-- <button class="btn btn-sm btn-outline-danger delete-btn" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button> -->
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center p-4">
+                        <p class="text-muted mb-0">You have no notifications.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-footer">
+            <!-- Pagination -->
+            {% if pagination and pagination.totalPages > 1 %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if pagination.hasPrev %}
+                            <li class="page-item"><a class="page-link" href="?page={{ pagination.currentPage|add:-1 }}">Previous</a></li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                        {% endif %}
+
+                        {% for i in page_range %}
+                            <li class="page-item {% if i == pagination.currentPage %}active{% endif %}">
+                                <a class="page-link" href="?page={{ i }}">{{ i }}</a>
+                            </li>
+                        {% endfor %}
+
+                        {% if pagination.hasNext %}
+                            <li class="page-item"><a class="page-link" href="?page={{ pagination.currentPage|add:1 }}">Next</a></li>
+                        {% else %}
+                            <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const listEl = document.getElementById('notification-list-page');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const markAllReadBtn = document.getElementById('mark-all-read-btn');
+
+    // Delegated events for action buttons
+    listEl?.addEventListener('click', async function(e) {
+        const target = e.target.closest('button');
+        const link = e.target.closest('a.notification-link');
+        const container = e.target.closest('[data-notification-id]');
+        if (!container) return;
+        const id = container.dataset.notificationId;
+
+        // If clicking on action buttons, prevent link navigation
+        if (target && (target.classList.contains('mark-read-btn') || target.classList.contains('delete-btn'))) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        if (target && target.classList.contains('mark-read-btn')) {
+            await markNotificationAsRead(id, container);
+        } else if (target && target.classList.contains('delete-btn')) {
+            const ok = confirm('Bạn có chắc muốn xóa thông báo này?');
+            if (!ok) return;
+            await deleteNotification(id, container, target);
+        } else if (link) {
+            // When clicking the notification itself, optimistically mark read then follow link
+            const href = link.getAttribute('href') || '#';
+            if (href !== '#' && container.dataset.isRead !== 'true') {
+                // Fire and forget only if not yet read
+                markNotificationAsRead(id, container);
+            }
+        }
+    });
+
+    refreshBtn?.addEventListener('click', async function() {
+        await refreshNotifications();
+    });
+
+    markAllReadBtn?.addEventListener('click', async function() {
+        const items = Array.from(listEl.querySelectorAll('[data-notification-id]'));
+        for (const item of items) {
+            if (item.dataset.isRead !== 'true') {
+                await markNotificationAsRead(item.dataset.notificationId, item);
+            }
+        }
+    });
+
+    async function refreshNotifications() {
+        try {
+            const headers = { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' };
+            const qsUser = USER_ID && USER_ID !== 'None' ? `&userId=${encodeURIComponent(USER_ID)}` : '';
+            const res = await fetch(`${API_GATEWAY_URL}/api/notifications?limit=15${qsUser}`, { headers });
+            const data = await res.json();
+            if (data.success) {
+                renderList(data.data.notifications);
+                // Update topbar badge by fetching unread count
+                const unreadUrl = `${API_GATEWAY_URL}/api/notifications/unread-count${qsUser ? `?userId=${encodeURIComponent(USER_ID)}` : ''}`;
+                const unreadRes = await fetch(unreadUrl, { headers });
+                const unreadData = await unreadRes.json();
+                if (unreadData.success) updateNotificationCount(unreadData.data.unreadCount);
+            }
+        } catch (err) {
+            console.error('Failed to refresh notifications', err);
+        }
+    }
+
+    function renderList(notifications) {
+        if (!listEl) return;
+        if (!notifications || notifications.length === 0) {
+            listEl.innerHTML = '<div class="text-center p-4"><p class="text-muted mb-0">You have no notifications.</p></div>';
+            return;
+        }
+        listEl.innerHTML = notifications.map(n => {
+            const isRead = (n.status === 'read') || (!!n.is_read);
+            return `
+                <div class="list-group-item flex-column align-items-start d-flex justify-content-between gap-3 ${isRead ? '' : 'list-group-item-light fw-bold'}"
+                     data-notification-id="${n.id}" data-is-read="${isRead ? 'true' : 'false'}">
+                    <a href="${n.url || '#'}" class="text-decoration-none flex-grow-1 me-3 notification-link" style="color: inherit;">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">${n.title || ''}</h5>
+                            <small class="text-muted">${(n.created_at ? new Date(n.created_at) : new Date()).toLocaleString()}</small>
+                        </div>
+                        <p class="mb-1">${n.message || ''}</p>
+                        <small>Type: ${n.type || ''}</small>
+                    </a>
+                    <div class="d-flex align-items-start gap-2">
+                        ${!isRead ? '<button class="btn btn-sm btn-outline-success mark-read-btn" title="Mark as read"><i class="fas fa-check"></i></button>' : ''}
+                        <!-- <button class="btn btn-sm btn-outline-danger delete-btn" title="Delete"><i class="fas fa-trash"></i></button> -->
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+})();
+
+async function markNotificationAsRead(notificationId, containerEl = null) {
+    try {
+        const qsUser = USER_ID && USER_ID !== 'None' ? `?userId=${encodeURIComponent(USER_ID)}` : '';
+        const response = await fetch(`${API_GATEWAY_URL}/api/notifications/${notificationId}/read${qsUser}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(USER_ID && USER_ID !== 'None' ? { userId: USER_ID } : {})
+        });
+        let data = {};
+        try { data = await response.json(); } catch (_) { data = { success: response.ok }; }
+        if (response.ok && (data.success === undefined || data.success === true)) {
+            const el = containerEl || document.querySelector(`[data-notification-id="${notificationId}"]`);
+            if (el) {
+                el.classList.remove('fw-bold', 'list-group-item-light');
+                el.dataset.isRead = 'true';
+                const readBtn = el.querySelector('.mark-read-btn');
+                if (readBtn) readBtn.remove();
+            }
+            const badge = document.getElementById('notification-count');
+            if (badge && badge.style.display !== 'none') {
+                const current = parseInt(badge.textContent, 10) || 0;
+                updateNotificationCount(Math.max(0, current - 1));
+            }
+        } else {
+            console.error('Failed to mark notification as read:', data.message || `HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error marking notification as read:', error);
+    }
+}
+
+async function deleteNotification(notificationId, containerEl = null) {
+    try {
+        const hasUser = (typeof USER_ID !== 'undefined' && USER_ID && USER_ID !== 'None');
+        const body = hasUser ? { userId: USER_ID } : {};
+
+        const response = await fetch(`${API_GATEWAY_URL}/api/notifications/${notificationId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        });
+        let data = {};
+        try { data = await response.json(); } catch (_) { data = { success: response.ok }; }
+        if (response.ok && (data.success === undefined || data.success === true)) {
+            const el = containerEl || document.querySelector(`[data-notification-id="${notificationId}"]`);
+            if (el) {
+                const wasUnread = el.dataset.isRead !== 'true';
+                el.remove();
+                // Adjust topbar count if needed
+                if (wasUnread) {
+                    const badge = document.getElementById('notification-count');
+                    if (badge && badge.style.display !== 'none') {
+                        const current = parseInt(badge.textContent, 10) || 0;
+                        updateNotificationCount(Math.max(0, current - 1));
+                    }
+                }
+                // If the list becomes empty, show empty state
+                const pageList = document.getElementById('notification-list-page');
+                if (pageList && pageList.children.length === 0) {
+                    pageList.innerHTML = '<div class="text-center p-4"><p class="text-muted mb-0">You have no notifications.</p></div>';
+                }
+            }
+        } else {
+            console.error('Failed to delete notification:', data.message || `HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error deleting notification:', error);
+    }
+}
+</script>
+{% endblock %}
+

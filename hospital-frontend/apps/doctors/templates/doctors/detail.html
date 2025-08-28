@@ -354,8 +354,8 @@
     </div>
 
     <div class="row">
-        <!-- Doctor Information -->
-        <div class="col-md-4">
+        <!-- Left Column: Doctor Information -->
+        <div class="col-lg-7">
             <div class="info-card">
                 <h5><i class="fas fa-user"></i> Doctor Information</h5>
                 <table class="table table-borderless">
@@ -433,7 +433,7 @@
                     <strong style="color: var(--text-primary);">Certifications:</strong>
                     <div class="mt-2">
                         {% for cert in doctor.certifications %}
-                        <p class="mb-2" style="color: var(--text-secondary);">{{cert}}</p>  
+                        <p class="mb-2" style="color: var(--text-secondary);">{{cert}}</p>
                         {% endfor %}
                     </div>
                 </div>
@@ -451,23 +451,10 @@
                 {% endif %}
             </div>
             {% endif %}
-
-            <!-- Quick Actions -->
-            <div class="info-card">
-                <h5><i class="fas fa-tools"></i> Quick Actions</h5>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-info btn-action" style="background: var(--brand-info); border: none;">
-                        <i class="fas fa-clock"></i> View Schedule
-                    </a>
-                    <button class="btn btn-success btn-action" onclick="bookAppointment('{{ doctor.userId }}')" style="background: var(--brand-success); border: none;">
-                        <i class="fas fa-plus"></i> Book Appointment
-                    </button>
-                </div>
-            </div>
         </div>
 
-        <!-- Availability -->
-        <div class="col-md-4">
+        <!-- Right Column: Availability & Actions -->
+        <div class="col-lg-5">
             <div class="info-card">
                 <h5><i class="fas fa-calendar-check text-primary"></i> Weekly Schedule</h5>
                 {% if doctor.weeklySchedule %}
@@ -518,67 +505,17 @@
                 {% endif %}
             </div>
 
-            <!-- Performance Metrics -->
+            <!-- Quick Actions -->
             <div class="info-card">
-                <h5><i class="fas fa-chart-bar"></i> Performance Metrics</h5>
-                {% if performance %}
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="performance-metric">
-                                <h4>{{ performance.totalAppointments|default:0 }}</h4>
-                                <small>Total Appointments</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="performance-metric">
-                                <h4>{{ performance.completedAppointments|default:0 }}</h4>
-                                <small>Completed</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="performance-metric">
-                                <h4>{{ performance.averageRating|default:"N/A" }}</h4>
-                                <small>Average Rating</small>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="performance-metric">
-                                <h4>{{ performance.patientsSeen|default:0 }}</h4>
-                                <small>Patients Seen</small>
-                            </div>
-                        </div>
-                    </div>
-                {% else %}
-                    <p style="color: var(--text-muted);">No performance data available.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Recent Schedule -->
-        <div class="col-md-4">
-            <div class="info-card">
-                <h5><i class="fas fa-calendar"></i> Recent Schedule</h5>
-                {% if schedule %}
-                    {% for appointment in schedule|slice:":5" %}
-                        <div class="schedule-item">
-                            <div class="d-flex justify-content-between">
-                                <strong style="color: var(--text-primary);">{{ appointment.date }}</strong>
-                                <span class="badge" style="background: var(--brand-primary); color: white;">{{ appointment.time }}</span>
-                            </div>
-                            <p class="mb-1" style="color: var(--text-secondary);">{{ appointment.patientName|default:"Patient" }}</p>
-                            <small style="color: var(--text-muted);">{{ appointment.type|default:"Consultation" }}</small>
-                        </div>
-                    {% endfor %}
-                    {% if schedule|length > 5 %}
-                        <div class="text-center mt-2">
-                            <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-sm btn-outline-primary" style="border-color: var(--brand-primary); color: var(--brand-primary);">
-                                View All Schedule
-                            </a>
-                        </div>
-                    {% endif %}
-                {% else %}
-                    <p style="color: var(--text-muted);">No scheduled appointments.</p>
-                {% endif %}
+                <h5><i class="fas fa-tools"></i> Quick Actions</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'doctors:schedule' doctor.userId %}" class="btn btn-info btn-action" style="background: var(--brand-info); border: none;">
+                        <i class="fas fa-clock"></i> View Schedule
+                    </a>
+                    <button class="btn btn-success btn-action" onclick="bookAppointment('{{ doctor.userId }}')" style="background: var(--brand-success); border: none;">
+                        <i class="fas fa-plus"></i> Book Appointment
+                    </button>
+                </div>
             </div>
         </div>
     </div>

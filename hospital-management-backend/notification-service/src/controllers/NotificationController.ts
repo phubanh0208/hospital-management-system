@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { NotificationService, CreateNotificationData } from '../services/NotificationService';
 import { logger, createSuccessResponse, createErrorResponse } from '@hospital/shared';
 
@@ -15,7 +15,7 @@ export class NotificationController {
       // Get user ID from authenticated request (set by API Gateway auth middleware)
       const user = (req as any).user;
       const userId = user?.id || (req.query.userId as string);
-      
+
       if (!userId) {
         res.status(400).json(createErrorResponse('User ID is required'));
         return;
@@ -30,11 +30,28 @@ export class NotificationController {
       };
 
       const result = await this.notificationService.getNotifications(userId, filters);
-
       res.json(createSuccessResponse(result, 'Notifications retrieved successfully'));
     } catch (error) {
       logger.error('Error getting notifications:', error);
       res.status(500).json(createErrorResponse('Failed to retrieve notifications'));
+    }
+  };
+
+  // GET /api/notifications/:id
+  public getNotificationById = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const notification = await this.notificationService.getNotificationById(id);
+
+      if (!notification) {
+        res.status(404).json(createErrorResponse('Notification not found'));
+        return;
+      }
+
+      res.json(createSuccessResponse(notification, 'Notification retrieved successfully'));
+    } catch (error) {
+      logger.error(`Error getting notification ${req.params.id}:`, error);
+      res.status(500).json(createErrorResponse('Failed to retrieve notification'));
     }
   };
 
@@ -225,7 +242,7 @@ export class NotificationController {
       const deletedCount = await this.notificationService.cleanupExpiredNotifications();
 
       res.json(createSuccessResponse(
-        { deletedCount }, 
+        { deletedCount },
         `Cleaned up ${deletedCount} expired notifications`
       ));
     } catch (error) {
@@ -250,11 +267,11 @@ export class NotificationController {
       const notification = await this.notificationService.createNotificationAsync(notificationData);
 
       res.status(202).json(createSuccessResponse(
-        { 
+        {
           notificationId: notification.id,
           status: 'queued',
           message: 'Notification queued for async processing'
-        }, 
+        },
         'Notification queued successfully'
       ));
     } catch (error) {
@@ -294,10 +311,10 @@ export class NotificationController {
       });
 
       res.status(202).json(createSuccessResponse(
-        { 
+        {
           status: 'queued',
           message: 'Appointment reminder queued for processing'
-        }, 
+        },
         'Appointment reminder queued successfully'
       ));
     } catch (error) {
@@ -333,10 +350,10 @@ export class NotificationController {
       });
 
       res.status(202).json(createSuccessResponse(
-        { 
+        {
           status: 'queued',
           message: 'Prescription ready notification queued for processing'
-        }, 
+        },
         'Prescription ready notification queued successfully'
       ));
     } catch (error) {
@@ -370,10 +387,10 @@ export class NotificationController {
       });
 
       res.status(202).json(createSuccessResponse(
-        { 
+        {
           status: 'queued',
           message: 'System alert queued for processing'
-        }, 
+        },
         'System alert queued successfully'
       ));
     } catch (error) {
@@ -418,11 +435,11 @@ export class NotificationController {
       });
 
       res.status(202).json(createSuccessResponse(
-        { 
+        {
           status: 'queued',
           recipientCount: recipient_user_ids.length,
           message: 'Bulk notification queued for processing'
-        }, 
+        },
         'Bulk notification queued successfully'
       ));
     } catch (error) {
@@ -439,7 +456,7 @@ export class NotificationController {
       const timeframe = req.query.timeframe as string || '24 hours';
       const retryService = this.notificationService.getRetryService();
       const stats = await retryService.getRetryStatistics(timeframe);
-      
+
       res.json(createSuccessResponse(stats, `Retry statistics for the last ${timeframe} retrieved successfully`));
     } catch (error) {
       logger.error('Error getting retry statistics:', error);
@@ -452,7 +469,7 @@ export class NotificationController {
     try {
       const retryService = this.notificationService.getRetryService();
       await retryService.processRetries();
-      
+
       res.json(createSuccessResponse(
         { status: 'completed', message: 'Retry processing triggered successfully' },
         'Retry processing completed'
@@ -469,7 +486,7 @@ export class NotificationController {
       const olderThanDays = parseInt(req.body.olderThanDays as string) || 30;
       const retryService = this.notificationService.getRetryService();
       await retryService.cleanupOldRetries(olderThanDays);
-      
+
       res.json(createSuccessResponse(
         { olderThanDays, message: `Cleanup completed for retries older than ${olderThanDays} days` },
         'Retry cleanup completed'

@@ -135,8 +135,13 @@
         <div class="col-xl-4 col-md-6 mb-4">
             <div class="doctor-card p-4 h-100">
                 <div class="d-flex align-items-center mb-3">
-                    <div class="doctor-avatar me-3">
-                        {{ doctor.fullName|default:doctor.username|first|upper }}
+                    <div class="doctor-avatar me-3 p-0">
+                        {% if doctor.avatarUrl %}
+                            <img src="{{ doctor.avatarUrl }}" alt="{{ doctor.fullName }}" class="w-100 h-100" style="object-fit: cover; border-radius: 50%;"
+                                 onerror="this.onerror=null; this.parentElement.innerHTML = '{{ doctor.fullName|default:doctor.username|first|upper }}';">
+                        {% else %}
+                            {{ doctor.fullName|default:doctor.username|first|upper }}
+                        {% endif %}
                     </div>
                     <div class="flex-grow-1">
                         <h5 class="mb-1">

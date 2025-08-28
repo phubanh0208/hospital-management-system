@@ -6,21 +6,21 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>{% block title %}{{ hospital_name }}{% endblock %}</title>
     <meta name="theme-color" content="#6C5CE7">
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
+
     <!-- Modern Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Custom CSS -->
     <link href="{% load static %}{% static 'css/style.css' %}" rel="stylesheet">
-    
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -32,11 +32,11 @@
                     <i class="fas fa-hospital-alt me-2"></i>
                     {{ hospital_name }}
                 </a>
-                
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                
+
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item">
@@ -146,7 +146,7 @@
                         </li>
                         {% endif %}
                     </ul>
-                    
+
                     <!-- User Menu -->
                     <ul class="navbar-nav align-items-center">
                         <li class="nav-item dropdown">
@@ -154,24 +154,25 @@
                                 <i class="fas fa-bell"></i>
                                 <span class="badge bg-danger" id="notification-count" style="display: none;">0</span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end" id="notification-list">
+
+                            <ul class="dropdown-menu dropdown-menu-end" id="notification-list" aria-labelledby="notificationDropdown">
                                 <li><h6 class="dropdown-header">Notifications</h6></li>
+
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-muted" href="#">No new notifications</a></li>
+                                <li id="no-unread" class="dropdown-item text-muted small text-center" style="display: none;">No unread notifications</li>
+                                <!-- Unread notifications will be dynamically inserted here before the final divider -->
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'notifications:list' %}">
-                                    <i class="fas fa-bell me-2"></i>View All Notifications
-                                </a></li>
+                                <li><a class="dropdown-item text-center dropdown-view-all" href="{% url 'notifications:list' %}">View all</a></li>
                             </ul>
                         </li>
-                        
+
                         <!-- Theme Toggle -->
                         <li class="nav-item ms-2">
                             <a href="#" id="theme-toggle" class="btn btn-outline-light btn-sm" data-bs-toggle="tooltip" title="Toggle theme" aria-pressed="false">
                                 <i class="fas fa-moon"></i>
                             </a>
                         </li>
-                        
+
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
                                 <i class="fas fa-user-circle me-1"></i>
@@ -198,7 +199,7 @@
             </div>
         </nav>
     {% endif %}
-    
+
     <!-- Main Content -->
     <main class="{% if is_authenticated %}container-fluid mt-4{% else %}d-flex align-items-center min-vh-100{% endif %}">
         <!-- Messages -->
@@ -223,143 +224,43 @@
                 </div>
             </div>
         {% endif %}
-        
+
         {% block content %}{% endblock %}
     </main>
-    
+
     <!-- Footer -->
     {% if is_authenticated %}
     <footer class="text-center text-muted py-4 mt-5" style="background: var(--surface-card); box-shadow: 0 -1px 0 var(--border-default);">
         <div class="container">
             <small>
-                &copy; 2025 {{ hospital_name }}. All rights reserved. | 
-                <a href="mailto:{{ hospital_email }}" class="text-muted text-decoration-none">{{ hospital_email }}</a> | 
+                &copy; 2025 {{ hospital_name }}. All rights reserved. |
+                <a href="mailto:{{ hospital_email }}" class="text-muted text-decoration-none">{{ hospital_email }}</a> |
                 {{ hospital_phone }}
             </small>
         </div>
     </footer>
     {% endif %}
-    
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- jQuery -->
+    <script>
+        const API_GATEWAY_URL = '{{ api_gateway_url }}';
+        const ACCESS_TOKEN = '{{ access_token }}';
+        const WEBSOCKET_URL = '{{ websocket_url }}';
+        const USER_ID = '{{ user_id }}';
+    </script>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    
+
     <!-- Custom JS -->
     <script src="{% load static %}{% static 'js/main.js' %}"></script>
-    
-    {% block base_websocket %}
-    <!-- WebSocket for Real-time Notifications -->
     {% if is_authenticated %}
-    <script>
-        // WebSocket connection for real-time notifications
-        const websocketUrl = '{{ websocket_url }}';
-        let notificationSocket = null;
-        
-        function connectWebSocket() {
-            try {
-                notificationSocket = new WebSocket(websocketUrl);
-                
-                notificationSocket.onopen = function(e) {
-                    console.log('Connected to notification WebSocket');
-                };
-                
-                notificationSocket.onmessage = function(e) {
-                    const data = JSON.parse(e.data);
-                    handleNotification(data);
-                };
-                
-                notificationSocket.onclose = function(e) {
-                    console.log('WebSocket connection closed');
-                    // Reconnect after 5 seconds
-                    setTimeout(connectWebSocket, 5000);
-                };
-                
-                notificationSocket.onerror = function(e) {
-                    console.error('WebSocket error:', e);
-                };
-            } catch (error) {
-                console.error('Failed to connect to WebSocket:', error);
-            }
-        }
-        
-        function handleNotification(notification) {
-            // Update notification count
-            const countElement = document.getElementById('notification-count');
-            const currentCount = parseInt(countElement.textContent) || 0;
-            countElement.textContent = currentCount + 1;
-            countElement.style.display = 'inline';
-            
-            // Add to notification list
-            const listElement = document.getElementById('notification-list');
-            const newNotification = document.createElement('li');
-            newNotification.innerHTML = `
-                <a class="dropdown-item" href="#">
-                    <div class="d-flex justify-content-between">
-                        <span>${notification.title || 'New Notification'}</span>
-                        <small class="text-muted">now</small>
-                    </div>
-                    <small class="text-muted">${notification.message || ''}</small>
-                </a>
-            `;
-            
-            // Insert after header and divider
-            const headerItems = listElement.querySelectorAll('.dropdown-header, .dropdown-divider');
-            if (headerItems.length >= 2) {
-                listElement.insertBefore(newNotification, headerItems[1].nextSibling);
-            } else {
-                listElement.appendChild(newNotification);
-            }
-            
-            // Show toast notification
-            showToast(notification.title || 'New Notification', notification.message || '');
-        }
-        
-        function showToast(title, message) {
-            // Create toast element
-            const toastHtml = `
-                <div class="toast align-items-center text-white bg-primary border-0" role="alert">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <strong>${title}</strong><br>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-            
-            // Add to toast container
-            let toastContainer = document.getElementById('toast-container');
-            if (!toastContainer) {
-                toastContainer = document.createElement('div');
-                toastContainer.id = 'toast-container';
-                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
-                document.body.appendChild(toastContainer);
-            }
-            
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-            
-            // Show toast
-            const toastElement = toastContainer.lastElementChild;
-            const toast = new bootstrap.Toast(toastElement);
-            toast.show();
-            
-            // Remove toast element after it's hidden
-            toastElement.addEventListener('hidden.bs.toast', function() {
-                toastElement.remove();
-            });
-        }
-        
-        // Connect to WebSocket when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            connectWebSocket();
-        });
-    </script>
+    <script src="{% load static %}{% static 'js/notifications.js' %}"></script>
     {% endif %}
-    {% endblock %}
-    
+
+
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

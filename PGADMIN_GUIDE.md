@@ -108,3 +108,4 @@ SELECT medication_name, COUNT(*) FROM prescriptions GROUP BY medication_name LIM
 SELECT * FROM analytics_events ORDER BY created_at DESC LIMIT 10;
 SELECT event_type, COUNT(*) FROM analytics_events GROUP BY event_type;
 ```
+docker exec -it hospital-rabbitmq sh -c "cd /opt/rabbitmq/plugins && wget https://github.com/rabbitmq/rabbitmq-delayed-message-exchange/releases/download/v3.13.0/rabbitmq_delayed_message_exchange-3.13.0.ez"

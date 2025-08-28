@@ -100,11 +100,11 @@ export const getDatabaseConfig = (serviceName: string): DatabaseConfig => {
       password: process.env.PRESCRIPTION_DB_PASSWORD || 'prescription_password_123'
     },
     analytics: {
-      host: process.env.ANALYTICS_DB_HOST || 'localhost',
-      port: parseInt(process.env.ANALYTICS_DB_PORT || '5436'),
-      database: process.env.ANALYTICS_DB_NAME || 'analytics_db',
-      username: process.env.ANALYTICS_DB_USER || 'analytics_user',
-      password: process.env.ANALYTICS_DB_PASSWORD || 'analytics_password'
+      host: process.env.ANALYTICS_DB_HOST || process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.ANALYTICS_DB_PORT || process.env.DB_PORT || '5436'),
+      database: process.env.ANALYTICS_DB_NAME || process.env.DB_NAME || 'analytics_service_db',
+      username: process.env.ANALYTICS_DB_USER || process.env.DB_USER || 'analytics_user',
+      password: process.env.ANALYTICS_DB_PASSWORD || process.env.DB_PASSWORD || 'analytics_password_123'
     },
     notification: {
       host: process.env.NOTIFICATION_DB_HOST || 'localhost',

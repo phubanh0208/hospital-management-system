@@ -8,7 +8,7 @@ export class EventController {
     this.analyticsService = new AnalyticsService();
   }
 
-  async trackEvent(req: Request, res: Response) {
+  async trackEvent(req: Request, res: Response): Promise<void | Response> {
     try {
       const event = req.body;
       if (!event.type || !event.payload) {

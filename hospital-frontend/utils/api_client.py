@@ -367,11 +367,23 @@ class APIClient:
     def get_notifications(self, token: str, **params) -> Dict[str, Any]:
         """Get notifications"""
         return self._make_request('GET', '/api/notifications', token=token, params=params)
-    
+
+    def get_unread_count(self, token: str) -> Dict[str, Any]:
+        """Get unread notifications count for current user"""
+        return self._make_request('GET', '/api/notifications/unread-count', token=token)
+
+    def mark_notification_read(self, token: str, notification_id: str) -> Dict[str, Any]:
+        """Mark a notification as read"""
+        return self._make_request('PUT', f'/api/notifications/{notification_id}/read', token=token)
+
+    def delete_notification(self, token: str, notification_id: str) -> Dict[str, Any]:
+        """Delete a notification"""
+        return self._make_request('DELETE', f'/api/notifications/{notification_id}', token=token)
+
     def send_notification(self, token: str, notification_data: Dict[str, Any]) -> Dict[str, Any]:
         """Send notification"""
         return self._make_request('POST', '/api/notifications/async', token=token, data=notification_data)
-    
+
     # Analytics Methods
     def get_dashboard_data(self, token: str) -> Dict[str, Any]:
         """Get dashboard analytics"""

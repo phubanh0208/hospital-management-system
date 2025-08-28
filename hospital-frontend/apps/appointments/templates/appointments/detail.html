@@ -186,24 +186,7 @@
                 <a href="{% url 'appointments:list' %}" class="btn btn-light mr-2">
                     <i class="fas fa-arrow-left"></i> Back to List
                 </a>
-                {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
-                <div class="dropdown d-inline">
-                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-cog"></i> Actions
-                    </button>
-                    <div class="dropdown-menu">
-                        {% if appointment.status != 'cancelled' and appointment.status != 'completed' %}
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#statusModal">
-                                <i class="fas fa-edit"></i> Update Status
-                            </a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item text-danger" href="#" onclick="cancelAppointment()">
-                                <i class="fas fa-times"></i> Cancel Appointment
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endif %}
+
             </div>
         </div>
     </div>
@@ -256,12 +239,12 @@
                         <span class="info-label">Name:</span>
                         <span class="info-value">{{ appointment.patient_name|default:"Unknown Patient" }}</span>
                     </div>
-                    
+
                     <div class="info-item">
                         <span class="info-label">Phone:</span>
                         <span class="info-value">{{ appointment.patient_phone|default:"N/A" }}</span>
                     </div>
-                    
+
                     <div class="info-item">
                         <span class="info-label">Patient ID:</span>
                         <span class="info-value">{{ appointment.patient_id|slice:":8" }}...</span>
@@ -384,25 +367,21 @@
                     </h6>
 
                     <div class="d-grid gap-2">
+                        {% if next_status %}
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#statusModal">
-                            <i class="fas fa-edit"></i> Update Status
+                            <i class="fas fa-edit"></i> {{ next_status_label }}
                         </button>
+                        {% else %}
+                        <button class="btn btn-primary" disabled>
+                            <i class="fas fa-edit"></i> No further action
+                        </button>
+                        {% endif %}
                         <button class="btn btn-danger" onclick="cancelAppointment()">
                             <i class="fas fa-times"></i> Cancel Appointment
                         </button>
                     </div>
                 </div>
-                {% elif user_role == 'patient' %}
-                <div class="action-buttons mb-3">
-                    <h6 class="mb-3">
-                        <i class="fas fa-info-circle"></i> Appointment Info
-                    </h6>
-                    <div class="alert alert-info">
-                        <small>
-                            <i class="fas fa-phone"></i> To modify this appointment, please contact the hospital staff.
-                        </small>
-                    </div>
-                </div>
+
                 {% endif %}
             {% endif %}
             
@@ -477,23 +456,23 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Update Appointment Status</h5>
+                <h5 class="modal-title">{{ next_status_label|default:"Update Appointment Status" }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form method="POST" action="{% url 'appointments:update_status' appointment.id %}">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="form-group">
-                        <label for="status">New Status</label>
-                        <select name="status" id="status" class="form-control" required>
-                            {% for value, label in status_choices %}
-                                <option value="{{ value }}" {% if appointment.status == value %}selected{% endif %}>
-                                    {{ label }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
+                    {% if next_status %}
+                        <input type="hidden" name="status" value="{{ next_status }}">
+                        <div class="alert alert-info">
+                            This action will update the appointment status to <strong>{{ next_status|title }}</strong>.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-secondary">
+                            No further status updates are available for this appointment.
+                        </div>
+                    {% endif %}
+
                     <div class="form-group">
                         <label for="doctor_notes">Doctor Notes (Optional)</label>
                         <textarea name="doctor_notes" id="doctor_notes" class="form-control" rows="3"
@@ -502,7 +481,11 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update Status</button>
+                    {% if next_status %}
+                        <button type="submit" class="btn btn-primary">{{ next_status_label }}</button>
+                    {% else %}
+                        <button type="button" class="btn btn-primary" disabled>Update</button>
+                    {% endif %}
                 </div>
             </form>
         </div>

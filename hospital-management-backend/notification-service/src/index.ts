@@ -14,8 +14,12 @@ import { dbConnection } from './config/database';
 import { rabbitmqConnection } from './config/rabbitmq';
 import { MessageHandler } from './services/MessageHandler';
 
+import { NotificationService } from './services/NotificationService';
+import { initializeWebSocket } from './services/WebSocketService';
 // Import routes
 import notificationRoutes from './routes/notificationRoutes';
+// Auth middleware to attach req.user from Auth Service token verification
+import { authenticate as authMiddleware } from './middleware/auth';
 
 const app = express();
 const server = createServer(app);
@@ -58,12 +62,12 @@ app.get('/health', (req, res) => {
   };
 
   const isHealthy = healthStatus.database.mongodb && healthStatus.messageQueue.rabbitmq;
-  
+
   res.status(isHealthy ? 200 : 503).json(healthStatus);
 });
 
-// API routes
-app.use('/api/notifications', notificationRoutes);
+// API routes (protected by auth middleware)
+app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -77,7 +81,7 @@ app.use('*', (req, res) => {
 // Global error handler
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error:', error);
-  
+
   res.status(500).json({
     success: false,
     message: 'Internal server error',
@@ -88,7 +92,7 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 // Graceful shutdown handler
 const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}, starting graceful shutdown...`);
-  
+
   server.close(async () => {
     try {
       await dbConnection.disconnect();
@@ -119,8 +123,12 @@ const startServer = async () => {
     await dbConnection.connect();
     await rabbitmqConnection.connect();
 
-    // Initialize message handler
-    const messageHandler = new MessageHandler();
+    // Initialize WebSocket service
+    const webSocketService = initializeWebSocket(server);
+
+    // Initialize services
+    const notificationService = new NotificationService(webSocketService);
+    const messageHandler = new MessageHandler(notificationService);
 
     // Start consuming messages from RabbitMQ
     await rabbitmqConnection.consumeMessages(async (message) => {

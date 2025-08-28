@@ -209,30 +209,43 @@ class AppointmentDetailView(View):
                 messages.error(request, "Appointment not found")
                 return redirect('appointments:list')
 
-            # Parse scheduled_date if exists
-            if appointment.get('scheduled_date'):
-                from datetime import datetime
+            # Parse datetime fields for proper timeline display
+            from datetime import datetime
+            def parse_iso(dt_str):
                 try:
-                    # Parse ISO datetime string to Python datetime
-                    scheduled_date_str = appointment['scheduled_date']
-
-                    # If it ends with Z, it's UTC time - treat as local time instead
-                    if scheduled_date_str.endswith('Z'):
-                        original_str = scheduled_date_str
-                        # Remove Z and parse as naive datetime (local time)
-                        scheduled_date_str = scheduled_date_str[:-5]  # Remove .000Z
-                        appointment['scheduled_date'] = datetime.fromisoformat(scheduled_date_str)
-                        logger.info(f"Appointment {appointment.get('id', 'unknown')}: Original={original_str}, Parsed as local={scheduled_date_str}, Result={appointment['scheduled_date']}")
-                    else:
-                        appointment['scheduled_date'] = datetime.fromisoformat(scheduled_date_str)
-                        logger.info(f"Appointment {appointment.get('id', 'unknown')}: No timezone, parsed as={appointment['scheduled_date']}")
-
+                    if not dt_str:
+                        return None
+                    # Remove trailing 'Z' if present; keep milliseconds if any
+                    if isinstance(dt_str, str) and dt_str.endswith('Z'):
+                        dt_str = dt_str[:-1]
+                    return datetime.fromisoformat(dt_str) if isinstance(dt_str, str) else dt_str
                 except Exception as e:
-                    logger.error(f"Error parsing scheduled_date: {str(e)}")
-                    appointment['scheduled_date'] = None
+                    logger.error(f"Error parsing datetime '{dt_str}': {e}")
+                    return None
+
+            # Support both snake_case and camelCase from API
+            appointment['scheduled_date'] = parse_iso(appointment.get('scheduled_date') or appointment.get('scheduledDate'))
+            appointment['created_at'] = parse_iso(appointment.get('created_at') or appointment.get('createdAt'))
+            appointment['confirmed_at'] = parse_iso(appointment.get('confirmed_at') or appointment.get('confirmedAt'))
+            appointment['completed_at'] = parse_iso(appointment.get('completed_at') or appointment.get('completedAt'))
+            appointment['updated_at'] = parse_iso(appointment.get('updated_at') or appointment.get('updatedAt'))
+
+            # Determine next allowable status for step-by-step updates
+            status = appointment.get('status')
+            next_status = None
+            next_status_label = None
+            if status == 'scheduled':
+                next_status = 'confirmed'
+                next_status_label = 'Confirm Appointment'
+            elif status == 'confirmed':
+                next_status = 'completed'
+                next_status_label = 'Mark as Completed'
+            # No next step for completed/cancelled or unknown statuses
 
             context = {
                 'appointment': appointment,
+                'next_status': next_status,
+                'next_status_label': next_status_label,
                 'status_choices': [
                     ('scheduled', 'Scheduled'),
                     ('confirmed', 'Confirmed'),
@@ -642,28 +655,49 @@ class UpdateAppointmentStatusView(View):
             token = request.session.get('access_token')
             api_client = APIClient(token=token)
 
-            new_status = request.POST.get('status')
             doctor_notes = request.POST.get('doctor_notes', '')
 
-            if not new_status:
-                messages.error(request, "Status is required")
+            # Get current appointment to enforce sequential transitions
+            current_resp = api_client.get_direct(f'http://localhost:3003/api/appointments/{appointment_id}')
+            current_appt = current_resp.get('data', {}) if current_resp else {}
+            current_status = (current_appt.get('status') or '').lower()
+
+            # Determine next allowed status
+            allowed_next = None
+            if current_status == 'scheduled':
+                allowed_next = 'confirmed'
+            elif current_status == 'confirmed':
+                allowed_next = 'completed'
+
+            if not allowed_next:
+                messages.error(request, "No further status updates are allowed for this appointment.")
                 return redirect('appointments:detail', appointment_id=appointment_id)
 
-            # Update appointment status via API Gateway
+            # Update appointment status via API Gateway (force allowed_next)
             update_data = {
-                'status': new_status,
+                'status': allowed_next,
                 'doctor_notes': doctor_notes
             }
 
-            response = api_client._make_request(
-                'PUT',
-                f'/api/appointments/{appointment_id}',
-                token=token,
-                data=update_data
-            )
+            # Call dedicated endpoints to ensure proper timeline fields are set
+            if allowed_next == 'confirmed':
+                response = api_client._make_request(
+                    'PUT',
+                    f'/api/appointments/{appointment_id}/confirm',
+                    token=token,
+                )
+            elif allowed_next == 'completed':
+                response = api_client._make_request(
+                    'PUT',
+                    f'/api/appointments/{appointment_id}/complete',
+                    token=token,
+                    data={'doctorNotes': doctor_notes}
+                )
+            else:
+                response = {'success': False, 'message': 'Invalid next status'}
 
             if response.get('success'):
-                messages.success(request, f"Appointment status updated to {new_status}")
+                messages.success(request, f"Appointment status updated to {allowed_next}")
             else:
                 messages.error(request, f"Failed to update appointment: {response.get('message', 'Unknown error')}")
 
@@ -705,6 +739,9 @@ class CancelAppointmentView(View):
 
 
 @method_decorator(login_required, name='dispatch')
+@method_decorator(role_required(['admin', 'staff', 'doctor', 'patient']), name='dispatch')
+@method_decorator(doctor_own_data_required, name='dispatch')
+@method_decorator(patient_own_data_required, name='dispatch')
 class AppointmentCalendarView(View):
     def get(self, request):
         try:
@@ -724,27 +761,40 @@ class AppointmentCalendarView(View):
             else:
                 end_date = datetime(year, month + 1, 1) - timedelta(days=1)
 
-            # Get all appointments (API might not support date filtering)
-            appointments_response = api_client.get_direct('http://localhost:3003/api/appointments')
+            # Build filters respecting role-based access similar to list view
+            patient_id = request.GET.get('patientId', '') or request.GET.get('patient_id', '')
+            doctor_id = request.GET.get('doctorId', '') or request.GET.get('doctor_id', '')
+
+            params = {
+                'dateFrom': start_date.strftime('%Y-%m-%d') + 'T00:00:00',
+                'dateTo': end_date.strftime('%Y-%m-%d') + 'T23:59:59',
+                'page': 1,
+                'limit': 2000  # fetch enough for the month
+            }
+            if patient_id:
+                params['patientId'] = patient_id
+            if doctor_id:
+                params['doctorId'] = doctor_id
+
+            logger.info(f"Calendar: Fetching appointments with params: {params}")
+            appointments_response = api_client.get_direct('http://localhost:3003/api/appointments', params=params)
             all_appointments = appointments_response.get('data', {}).get('appointments', [])
 
-            logger.info(f"Calendar: Retrieved {len(all_appointments)} total appointments")
+            logger.info(f"Calendar: Retrieved {len(all_appointments)} appointments after filtering")
 
             # Parse scheduled_date and filter for current month
             appointments_by_date = {}
             month_appointments = []
 
             for appointment in all_appointments:
-                scheduled_date_str = appointment.get('scheduled_date', '')
+                scheduled_date_str = appointment.get('scheduled_date') or appointment.get('scheduledDate') or ''
                 if scheduled_date_str:
                     try:
                         # Parse ISO datetime string to Python datetime
-                        if scheduled_date_str.endswith('Z'):
-                            # Remove Z and parse as naive datetime (local time)
-                            scheduled_date_str = scheduled_date_str[:-5]  # Remove .000Z
-                            scheduled_datetime = datetime.fromisoformat(scheduled_date_str)
-                        else:
-                            scheduled_datetime = datetime.fromisoformat(scheduled_date_str)
+                        if isinstance(scheduled_date_str, str) and scheduled_date_str.endswith('Z'):
+                            # Remove trailing Z only
+                            scheduled_date_str = scheduled_date_str[:-1]
+                        scheduled_datetime = datetime.fromisoformat(scheduled_date_str) if isinstance(scheduled_date_str, str) else scheduled_date_str
                         appointment['scheduled_date'] = scheduled_datetime
 
                         # Check if appointment is in current month

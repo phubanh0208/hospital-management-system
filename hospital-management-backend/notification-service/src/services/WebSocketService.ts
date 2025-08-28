@@ -1,247 +1,125 @@
-import { Server as SocketIOServer, Socket } from 'socket.io';
-import { Server as HTTPServer } from 'http';
+import { Server as WebSocketServer, WebSocket } from 'ws';
+import { Server as HttpServer } from 'http';
 import { logger } from '@hospital/shared';
-import { NotificationType, NotificationPriority } from '@hospital/shared';
 
-export interface WebSocketNotification {
-  id: string;
-  userId: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  priority: NotificationPriority;
-  metadata?: Record<string, any>;
-  timestamp: Date;
+interface AuthenticatedWebSocket extends WebSocket {
+  userId?: string;
 }
 
+// Define a singleton instance of WebSocketService
+let instance: WebSocketService | null = null;
+
 export class WebSocketService {
-  private io: SocketIOServer;
-  private connectedUsers: Map<string, Set<string>> = new Map(); // userId -> Set of socketIds
-  private userSockets: Map<string, string> = new Map(); // socketId -> userId
+  private wss: WebSocketServer;
+  private clients: Map<string, Set<AuthenticatedWebSocket>> = new Map();
 
-  constructor(server: HTTPServer) {
-    this.io = new SocketIOServer(server, {
-      cors: {
-        origin: process.env.WEBSOCKET_CORS_ORIGIN || "http://localhost:3000",
-        methods: ["GET", "POST"],
-        credentials: true
-      },
-      transports: ['websocket', 'polling']
-    });
-
-    this.setupEventHandlers();
+  constructor(server: HttpServer) {
+    this.wss = new WebSocketServer({ server });
+    this.initialize();
     logger.info('WebSocket service initialized');
   }
 
-  private setupEventHandlers(): void {
-    this.io.on('connection', (socket: Socket) => {
-      logger.info('Client connected', { socketId: socket.id });
+  private initialize(): void {
+    this.wss.on('connection', async (ws: AuthenticatedWebSocket, req: any) => {
+      let userId = 'anonymous';
+      try {
+        const url = new URL(req.url || '/', 'http://localhost');
+        const token = url.searchParams.get('token');
 
-      // Handle user authentication
-      socket.on('authenticate', (data: { userId: string, token?: string }) => {
-        this.authenticateUser(socket, data.userId, data.token);
-      });
+        logger.info(`Attempting to connect WS. Token found: ${!!token}`);
 
-      // Handle user joining rooms
-      socket.on('join-room', (roomId: string) => {
-        socket.join(roomId);
-        logger.info('User joined room', { 
-          socketId: socket.id, 
-          roomId,
-          userId: this.userSockets.get(socket.id)
-        });
-      });
+        if (token && token !== 'None' && token.trim() !== '') {
+          const authServiceUrl = process.env.AUTH_SERVICE_URL || 'http://localhost:3001';
+          const resp = await fetch(`${authServiceUrl}/api/auth/profile`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          });
 
-      // Handle user leaving rooms
-      socket.on('leave-room', (roomId: string) => {
-        socket.leave(roomId);
-        logger.info('User left room', { 
-          socketId: socket.id, 
-          roomId,
-          userId: this.userSockets.get(socket.id)
-        });
-      });
-
-      // Handle notification read status
-      socket.on('mark-notification-read', (notificationId: string) => {
-        const userId = this.userSockets.get(socket.id);
-        if (userId) {
-          this.broadcastToUser(userId, 'notification-read', { notificationId });
-          logger.info('Notification marked as read', { notificationId, userId });
+          if (resp && resp.ok) {
+            const data = await resp.json();
+            const userData = data as any;
+            userId = userData?.data?.id || userData?.id || 'anonymous';
+            logger.info(`WS auth success. User ID: ${userId}`);
+          } else {
+            const errorBody = await resp.text();
+            logger.warn(`WS auth failed: invalid token. Status: ${resp.status}, Body: ${errorBody}`);
+          }
+        } else {
+            logger.warn('WS connection attempt without a valid token.');
         }
+      } catch (e) {
+        logger.error('WS auth error:', e);
+      }
+
+      ws.userId = userId;
+      this.addClient(userId, ws);
+
+      logger.info(`WebSocket client connected: ${userId}`);
+
+      ws.on('message', (message: any) => {
+        logger.info(`Received message from ${userId}: ${message}`);
+        // Handle incoming messages if needed
       });
 
-      // Handle typing indicators for chat features
-      socket.on('typing-start', (data: { roomId: string }) => {
-        const userId = this.userSockets.get(socket.id);
-        if (userId) {
-          socket.to(data.roomId).emit('user-typing', { userId, isTyping: true });
-        }
+      ws.on('close', () => {
+        this.removeClient(ws.userId, ws);
+        logger.info(`WebSocket client disconnected: ${userId}`);
       });
 
-      socket.on('typing-stop', (data: { roomId: string }) => {
-        const userId = this.userSockets.get(socket.id);
-        if (userId) {
-          socket.to(data.roomId).emit('user-typing', { userId, isTyping: false });
-        }
-      });
-
-      // Handle disconnection
-      socket.on('disconnect', (reason) => {
-        this.handleDisconnection(socket, reason);
-      });
-
-      // Handle errors
-      socket.on('error', (error) => {
-        logger.error('Socket error', { socketId: socket.id, error });
+      ws.on('error', (error) => {
+        logger.error(`WebSocket error for client ${userId}:`, error);
       });
     });
   }
 
-  private authenticateUser(socket: Socket, userId: string, token?: string): void {
-    try {
-      // TODO: Verify JWT token with auth service
-      // For now, we'll accept any userId for development
-      
-      // Remove user from previous socket if exists
-      const existingSocketId = Array.from(this.userSockets.entries())
-        .find(([_, uid]) => uid === userId)?.[0];
-      
-      if (existingSocketId) {
-        this.removeUserSocket(existingSocketId);
+  private addClient(userId: string, ws: AuthenticatedWebSocket): void {
+    if (!this.clients.has(userId)) {
+      this.clients.set(userId, new Set());
+    }
+    this.clients.get(userId)?.add(ws);
+  }
+
+  private removeClient(userId: string | undefined, ws: AuthenticatedWebSocket): void {
+    if (userId && this.clients.has(userId)) {
+      this.clients.get(userId)?.delete(ws);
+      if (this.clients.get(userId)?.size === 0) {
+        this.clients.delete(userId);
       }
-
-      // Add user to connected users
-      if (!this.connectedUsers.has(userId)) {
-        this.connectedUsers.set(userId, new Set());
-      }
-      this.connectedUsers.get(userId)!.add(socket.id);
-      this.userSockets.set(socket.id, userId);
-
-      // Join user to their personal room
-      socket.join(`user:${userId}`);
-
-      // Send authentication success
-      socket.emit('authenticated', { 
-        success: true, 
-        userId,
-        message: 'Successfully authenticated'
-      });
-
-      logger.info('User authenticated', { 
-        socketId: socket.id, 
-        userId,
-        totalConnections: this.connectedUsers.get(userId)?.size || 0
-      });
-
-    } catch (error) {
-      logger.error('Authentication failed', { socketId: socket.id, userId, error });
-      socket.emit('authenticated', { 
-        success: false, 
-        message: 'Authentication failed'
-      });
     }
   }
 
-  private handleDisconnection(socket: Socket, reason: string): void {
-    const userId = this.userSockets.get(socket.id);
-    
-    if (userId) {
-      this.removeUserSocket(socket.id);
-      logger.info('User disconnected', { 
-        socketId: socket.id, 
-        userId, 
-        reason,
-        remainingConnections: this.connectedUsers.get(userId)?.size || 0
-      });
-    } else {
-      logger.info('Anonymous client disconnected', { socketId: socket.id, reason });
-    }
-  }
-
-  private removeUserSocket(socketId: string): void {
-    const userId = this.userSockets.get(socketId);
-    if (userId) {
-      const userSockets = this.connectedUsers.get(userId);
-      if (userSockets) {
-        userSockets.delete(socketId);
-        if (userSockets.size === 0) {
-          this.connectedUsers.delete(userId);
+  public broadcastToUser(userId: string, message: any): void {
+    const userClients = this.clients.get(userId);
+    if (userClients) {
+      const messageString = JSON.stringify(message);
+      userClients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(messageString);
         }
-      }
-      this.userSockets.delete(socketId);
-    }
-  }
-
-  public async sendNotificationToUser(
-    userId: string, 
-    notification: WebSocketNotification
-  ): Promise<boolean> {
-    try {
-      const userSockets = this.connectedUsers.get(userId);
-      
-      if (!userSockets || userSockets.size === 0) {
-        logger.info('User not connected, notification will be stored for later', { userId });
-        return false;
-      }
-
-      // Send to user's personal room
-      this.io.to(`user:${userId}`).emit('notification', notification);
-
-      logger.info('Notification sent via WebSocket', {
-        userId,
-        notificationId: notification.id,
-        type: notification.type,
-        connectedSockets: userSockets.size
       });
-
-      return true;
-    } catch (error) {
-      logger.error('Failed to send WebSocket notification', { userId, error });
-      return false;
+      logger.info(`Broadcasted message to user ${userId}`);
     }
-  }
-
-  public broadcastToUser(userId: string, event: string, data: any): void {
-    this.io.to(`user:${userId}`).emit(event, data);
-  }
-
-  public broadcastToRoom(roomId: string, event: string, data: any): void {
-    this.io.to(roomId).emit(event, data);
-  }
-
-  public broadcastToAll(event: string, data: any): void {
-    this.io.emit(event, data);
-  }
-
-  public getConnectedUsers(): string[] {
-    return Array.from(this.connectedUsers.keys());
-  }
-
-  public getUserConnectionCount(userId: string): number {
-    return this.connectedUsers.get(userId)?.size || 0;
-  }
-
-  public getTotalConnections(): number {
-    return this.userSockets.size;
   }
 
   public isUserConnected(userId: string): boolean {
-    return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
-  }
-
-  public async sendSystemAlert(message: string, priority: NotificationPriority = NotificationPriority.HIGH): Promise<void> {
-    const notification: WebSocketNotification = {
-      id: `system-${Date.now()}`,
-      userId: 'system',
-      title: 'System Alert',
-      message,
-      type: NotificationType.SYSTEM_ALERT,
-      priority,
-      timestamp: new Date()
-    };
-
-    this.broadcastToAll('system-alert', notification);
-    logger.info('System alert broadcasted', { message, priority });
+    return this.clients.has(userId);
   }
 }
+
+export const initializeWebSocket = (server: HttpServer) => {
+  if (!instance) {
+    instance = new WebSocketService(server);
+  }
+  return instance;
+};
+
+export const getWebSocketService = () => {
+  if (!instance) {
+    throw new Error('WebSocketService not initialized');
+  }
+  return instance;
+};
+

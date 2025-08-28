@@ -4,15 +4,16 @@ import { NotificationController } from '../controllers/NotificationController';
 const router = Router();
 const notificationController = new NotificationController();
 
-// Basic notification CRUD
-router.get('/', notificationController.getNotifications);
-router.post('/', notificationController.createNotification);
-router.put('/:id/read', notificationController.markAsRead);
-router.delete('/:id', notificationController.deleteNotification);
-
 // Utility endpoints
 router.get('/unread-count', notificationController.getUnreadCount);
 router.post('/cleanup-expired', notificationController.cleanupExpired);
+
+// Basic notification CRUD
+router.get('/', notificationController.getNotifications);
+router.post('/', notificationController.createNotification);
+router.get('/:id', notificationController.getNotificationById);
+router.put('/:id/read', notificationController.markAsRead);
+router.delete('/:id', notificationController.deleteNotification);
 
 // Specific notification types (synchronous)
 router.post('/send-appointment-reminder', notificationController.sendAppointmentReminder);
