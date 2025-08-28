@@ -1,13 +1,14 @@
-import { 
-  Patient, 
-  PatientMedicalHistory, 
+import {
+  Patient,
+  PatientMedicalHistory,
   PatientVisitSummary,
-  getPool, 
-  executeQuery, 
-  logger 
+  getPool,
+  executeQuery,
+  logger
 } from '@hospital/shared';
 import { v4 as uuidv4 } from 'uuid';
 import { EventService } from './EventService';
+import { VisitSummaryService } from './VisitSummaryService';
 
 export interface PatientResult {
   success: boolean;
@@ -34,13 +35,13 @@ export class PatientService {
       // Build search condition
       let searchCondition = '';
       let searchParams: any[] = [];
-      
+
       if (search) {
         searchCondition = `
           WHERE (
-            full_name ILIKE $${searchParams.length + 1} OR 
-            patient_code ILIKE $${searchParams.length + 1} OR 
-            phone ILIKE $${searchParams.length + 1} OR 
+            full_name ILIKE $${searchParams.length + 1} OR
+            patient_code ILIKE $${searchParams.length + 1} OR
+            phone ILIKE $${searchParams.length + 1} OR
             email ILIKE $${searchParams.length + 1}
           ) AND is_active = true
         `;
@@ -51,8 +52,8 @@ export class PatientService {
 
       // Get total count
       const countQuery = `
-        SELECT COUNT(*) as total 
-        FROM patients 
+        SELECT COUNT(*) as total
+        FROM patients
         ${searchCondition}
       `;
       const countResult = await executeQuery(this.pool, countQuery, searchParams);
@@ -117,13 +118,13 @@ export class PatientService {
     try {
       const patients = await executeQuery(
         this.pool,
-        `SELECT 
-          id, patient_code, full_name, date_of_birth, gender, 
-          phone, email, address, blood_type, allergies, 
+        `SELECT
+          id, patient_code, full_name, date_of_birth, gender,
+          phone, email, address, blood_type, allergies,
           medical_history, emergency_contact, insurance_info,
-          created_by_user_id, hospital_id, is_active, 
+          created_by_user_id, hospital_id, is_active,
           created_at, updated_at
-        FROM patients 
+        FROM patients
         WHERE id = $1 AND is_active = true`,
         [id]
       );
@@ -154,13 +155,13 @@ export class PatientService {
     try {
       const patients = await executeQuery(
         this.pool,
-        `SELECT 
-          id, patient_code, full_name, date_of_birth, gender, 
-          phone, email, address, blood_type, allergies, 
+        `SELECT
+          id, patient_code, full_name, date_of_birth, gender,
+          phone, email, address, blood_type, allergies,
           medical_history, emergency_contact, insurance_info,
-          created_by_user_id, hospital_id, is_active, 
+          created_by_user_id, hospital_id, is_active,
           created_at, updated_at
-        FROM patients 
+        FROM patients
         WHERE patient_code = $1 AND is_active = true`,
         [code]
       );
@@ -359,14 +360,14 @@ export class PatientService {
       updateValues.push(id);
 
       const updateQuery = `
-        UPDATE patients 
+        UPDATE patients
         SET ${updateFields.join(', ')}
         WHERE id = $${paramIndex}
-        RETURNING 
-          id, patient_code, full_name, date_of_birth, gender, 
-          phone, email, address, blood_type, allergies, 
+        RETURNING
+          id, patient_code, full_name, date_of_birth, gender,
+          phone, email, address, blood_type, allergies,
           medical_history, emergency_contact, insurance_info,
-          created_by_user_id, hospital_id, is_active, 
+          created_by_user_id, hospital_id, is_active,
           created_at, updated_at
       `;
 
@@ -427,11 +428,11 @@ export class PatientService {
     try {
       const history = await executeQuery(
         this.pool,
-        `SELECT 
-          id, patient_id, condition_name, diagnosed_date, 
+        `SELECT
+          id, patient_id, condition_name, diagnosed_date,
           status, notes, created_at
-        FROM patient_medical_history 
-        WHERE patient_id = $1 
+        FROM patient_medical_history
+        WHERE patient_id = $1
         ORDER BY created_at DESC`,
         [patientId]
       );
@@ -465,11 +466,11 @@ export class PatientService {
 
       const insertQuery = `
         INSERT INTO patient_medical_history (
-          id, patient_id, condition_name, diagnosed_date, 
+          id, patient_id, condition_name, diagnosed_date,
           status, notes, created_at
         ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
-        RETURNING 
-          id, patient_id, condition_name, diagnosed_date, 
+        RETURNING
+          id, patient_id, condition_name, diagnosed_date,
           status, notes, created_at
       `;
 
@@ -509,46 +510,47 @@ export class PatientService {
     try {
       const summaries = await executeQuery(
         this.pool,
-        `SELECT 
-          id, patient_id, last_appointment_date, total_appointments, 
+        `SELECT
+          id, patient_id, last_appointment_date, total_appointments,
           active_prescriptions, last_prescription_date, updated_at
-        FROM patient_visit_summary 
+        FROM patient_visit_summary
         WHERE patient_id = $1`,
         [patientId]
       );
 
-      if (summaries.length === 0) {
-        // Return default summary if not exists
-        const defaultSummary: PatientVisitSummary = {
-          id: '',
-          patientId,
-          lastAppointmentDate: undefined,
-          totalAppointments: 0,
-          activePrescriptions: 0,
-          lastPrescriptionDate: undefined,
-          updatedAt: new Date()
+      if (summaries.length > 0) {
+        const summary: PatientVisitSummary = {
+          id: summaries[0].id,
+          patientId: summaries[0].patient_id,
+          lastAppointmentDate: summaries[0].last_appointment_date,
+          totalAppointments: summaries[0].total_appointments,
+          activePrescriptions: summaries[0].active_prescriptions,
+          lastPrescriptionDate: summaries[0].last_prescription_date,
+          updatedAt: summaries[0].updated_at
         };
-
         return {
           success: true,
-          data: defaultSummary
+          data: summary
         };
       }
 
-      const summary: PatientVisitSummary = {
-        id: summaries[0].id,
-        patientId: summaries[0].patient_id,
-        lastAppointmentDate: summaries[0].last_appointment_date,
-        totalAppointments: summaries[0].total_appointments,
-        activePrescriptions: summaries[0].active_prescriptions,
-        lastPrescriptionDate: summaries[0].last_prescription_date,
-        updatedAt: summaries[0].updated_at
+      // If no summary exists, calculate it on the fly
+      logger.info(`No pre-calculated visit summary for patient ${patientId}, calculating on the fly...`);
+      const visitSummaryService = new VisitSummaryService();
+      const calculationResult = await visitSummaryService.updateVisitSummary(patientId);
+
+      if (calculationResult.success) {
+        logger.info(`Successfully calculated visit summary for patient ${patientId}`);
+        // Re-fetch the newly created summary
+        return this.getVisitSummary(patientId);
+      }
+
+      logger.error(`Failed to calculate visit summary for patient ${patientId}: ${calculationResult.message}`);
+      return {
+        success: false,
+        message: 'Failed to calculate visit summary'
       };
 
-      return {
-        success: true,
-        data: summary
-      };
     } catch (error) {
       logger.error('Get visit summary service error:', error);
       return {
@@ -572,10 +574,10 @@ export class PatientService {
       bloodType: row.blood_type,
       allergies: row.allergies,
       medicalHistory: row.medical_history,
-      emergencyContact: typeof row.emergency_contact === 'string' ? 
+      emergencyContact: typeof row.emergency_contact === 'string' ?
         JSON.parse(row.emergency_contact) : row.emergency_contact,
-      insuranceInfo: row.insurance_info ? 
-        (typeof row.insurance_info === 'string' ? JSON.parse(row.insurance_info) : row.insurance_info) : 
+      insuranceInfo: row.insurance_info ?
+        (typeof row.insurance_info === 'string' ? JSON.parse(row.insurance_info) : row.insurance_info) :
         undefined,
       createdByUserId: row.created_by_user_id,
       hospitalId: row.hospital_id,
@@ -588,13 +590,13 @@ export class PatientService {
   // Helper method to format date for storage to avoid timezone issues
   private formatDateForStorage = (dateValue: any): string | null => {
     if (!dateValue) return null;
-    
+
     try {
       // If it's already a string in YYYY-MM-DD format, return as-is
       if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
         return dateValue;
       }
-      
+
       // If it's a Date object, format to YYYY-MM-DD
       if (dateValue instanceof Date) {
         const year = dateValue.getFullYear();
@@ -602,7 +604,7 @@ export class PatientService {
         const day = String(dateValue.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       // Try to parse and format other date formats
       const parsedDate = new Date(dateValue);
       if (!isNaN(parsedDate.getTime())) {
@@ -611,7 +613,7 @@ export class PatientService {
         const day = String(parsedDate.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       return null;
     } catch (error) {
       logger.error('Error formatting date for storage:', error);
@@ -622,13 +624,13 @@ export class PatientService {
   // Helper method to format date as string only to avoid timezone issues
   private formatDateOnlyAsString = (dateValue: any): string | undefined => {
     if (!dateValue) return undefined;
-    
+
     try {
       // If it's already a string in YYYY-MM-DD format, return as-is
       if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
         return dateValue;
       }
-      
+
       // If it's a Date object, format to YYYY-MM-DD string
       if (dateValue instanceof Date) {
         const year = dateValue.getFullYear();
@@ -636,7 +638,7 @@ export class PatientService {
         const day = String(dateValue.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       // Try to parse and format other date formats
       const parsedDate = new Date(dateValue);
       if (!isNaN(parsedDate.getTime())) {
@@ -645,7 +647,7 @@ export class PatientService {
         const day = String(parsedDate.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       }
-      
+
       return undefined;
     } catch (error) {
       logger.error('Error formatting date as string:', error);
@@ -656,14 +658,14 @@ export class PatientService {
   // Helper method to format date fields to avoid timezone issues
   private formatDateOnly = (dateValue: any): Date | undefined => {
     if (!dateValue) return undefined;
-    
+
     try {
       // If it's already a string in YYYY-MM-DD format, create a date in local time
       if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
         const [year, month, day] = dateValue.split('-').map(Number);
         return new Date(year, month - 1, day); // month is 0-based in JS Date
       }
-      
+
       // If it's a Date object, recreate it in local time to avoid timezone conversion
       if (dateValue instanceof Date) {
         // Extract the date components in local time
@@ -672,7 +674,7 @@ export class PatientService {
         const day = dateValue.getDate();
         return new Date(year, month, day); // Create new date in local time
       }
-      
+
       // Try to parse other formats
       const parsedDate = new Date(dateValue);
       if (!isNaN(parsedDate.getTime())) {
@@ -681,7 +683,7 @@ export class PatientService {
         const day = parsedDate.getDate();
         return new Date(year, month, day); // Create date in local time
       }
-      
+
       return undefined;
     } catch (error) {
       logger.error('Error formatting date:', error);

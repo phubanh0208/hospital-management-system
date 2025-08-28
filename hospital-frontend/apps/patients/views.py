@@ -97,15 +97,15 @@ class PatientDetailView(View):
                 # Get visit summary
                 summary_response = api_client.get_patient_visit_summary(token=token, patient_id=patient_id)
                 visit_summary = summary_response.get('data', {}) if summary_response.get('success') else {}
-                logger.info(f"Visit summary loaded - Appointments: {visit_summary.get('totalAppointments', 'N/A')}, Prescriptions: {visit_summary.get('activePrescriptions', 'N/A')}")
-                
-                # Ensure visit_summary has default values if API failed
-                if not visit_summary:
-                    visit_summary = {
-                        'totalAppointments': 0,
-                        'activePrescriptions': 0
-                    }
-                    logger.warning(f"Visit summary API failed, using defaults: {visit_summary}")
+                logger.info(f"Visit summary loaded: {visit_summary}")
+
+                # Ensure visit_summary has default values if API failed or data is missing
+                if not visit_summary or not isinstance(visit_summary, dict):
+                    visit_summary = {}
+
+                visit_summary.setdefault('totalAppointments', 0)
+                visit_summary.setdefault('activePrescriptions', 0)
+                logger.info(f"Final visit_summary: {visit_summary}")
 
                 context = {
                     'patient': patient,

@@ -179,18 +179,11 @@
                 </div>
 
                 <div class="row text-center mb-3">
-                    <div class="col-6">
+                    <div class="col-12">
                         <div class="text-primary">
                             <i class="fas fa-stethoscope fa-2x mb-1"></i>
                             <div class="small">Specialization</div>
                             <div class="font-weight-bold">{{ doctor.specialization|default:"General Medicine" }}</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="text-success">
-                            <i class="fas fa-calendar-check fa-2x mb-1"></i>
-                            <div class="small">Appointments</div>
-                            <div class="font-weight-bold">{{ doctor.appointment_count|default:0 }}</div>
                         </div>
                     </div>
                 </div>
