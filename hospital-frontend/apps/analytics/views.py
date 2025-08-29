@@ -52,14 +52,8 @@ class DoctorAnalyticsView(View):
 
             dashboard_data = response.get('data', {}).get('dashboard', {})
 
-            # Clean up the revenue format before passing to the template
-            if 'total_revenue' in dashboard_data and isinstance(dashboard_data['total_revenue'], str):
-                try:
-                    # Remove all dots, convert to integer, and treat as cents
-                    cleaned_revenue = int(dashboard_data['total_revenue'].replace('.', '')) / 100
-                    dashboard_data['total_revenue'] = cleaned_revenue
-                except (ValueError, TypeError):
-                    dashboard_data['total_revenue'] = 0  # Default to 0 if parsing fails
+
+
 
             context = {
                 'doctor_id': doctor_id,
@@ -77,7 +71,7 @@ class DoctorAnalyticsView(View):
 
 
 @method_decorator(login_required, name='dispatch')
-@method_decorator(role_required(['admin']), name='dispatch')
+@method_decorator(role_required(['admin', 'staff']), name='dispatch')
 class AdminAnalyticsView(View):
     """Admin analytics dashboard view"""
 
@@ -102,14 +96,7 @@ class AdminAnalyticsView(View):
             # Extract the main dashboard data object
             dashboard_data = response.get('data', {}).get('dashboard', {})
 
-            # Clean up the revenue format before passing to the template
-            if 'total_revenue' in dashboard_data and isinstance(dashboard_data['total_revenue'], str):
-                try:
-                    # Remove all dots, convert to integer, and treat as cents
-                    cleaned_revenue = int(dashboard_data['total_revenue'].replace('.', '')) / 100
-                    dashboard_data['total_revenue'] = cleaned_revenue
-                except (ValueError, TypeError):
-                    dashboard_data['total_revenue'] = 0  # Default to 0 if parsing fails
+
 
             context = {
                 'dashboard': dashboard_data,

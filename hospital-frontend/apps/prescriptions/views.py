@@ -80,6 +80,7 @@ class PrescriptionListView(View):
 
             # Get query parameters
             page = request.GET.get('page', 1)
+            limit = int(request.GET.get('limit', 10))
             search = request.GET.get('search', '')
             status = request.GET.get('status', '')
             doctor_id = request.GET.get('doctor_id', '')
@@ -90,7 +91,7 @@ class PrescriptionListView(View):
             # Build query parameters
             params = {
                 'page': page,
-                'limit': 10,
+                'limit': limit,
                 'search': search,
                 'status': status,
                 'doctorId': doctor_id,
@@ -183,6 +184,9 @@ class PrescriptionListView(View):
                 doctors = []
                 patients = []
 
+            total_pages = pagination.get('totalPages', 1)
+            page_range = range(1, total_pages + 1)
+
             context = {
                 'prescriptions': prescriptions,
                 'pagination': pagination,
@@ -195,7 +199,9 @@ class PrescriptionListView(View):
                     'patient_id': patient_id,
                     'date_from': date_from,
                     'date_to': date_to,
+                    'limit': limit,
                 },
+                'limit': limit,
                 'status_choices': [
                     ('', 'All Status'),
                     ('draft', 'Draft'),
@@ -204,7 +210,8 @@ class PrescriptionListView(View):
                     ('completed', 'Completed'),
                     ('cancelled', 'Cancelled'),
                     ('expired', 'Expired'),
-                ]
+                ],
+                'page_range': page_range,
             }
 
             return render(request, 'prescriptions/list.html', context)
@@ -689,7 +696,7 @@ class PatientSelectionView(TemplateView):
             limit = int(self.request.GET.get('limit', 10))
 
             # Get patients from API (get_patients method doesn't accept sorting params)
-            patients_response = api_client.get_patients(token)
+            patients_response = api_client.get_patients(token, page=1, limit=1000)  # Fetch all patients
 
             if patients_response.get('success'):
                 patients_data = patients_response.get('data', {})

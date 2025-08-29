@@ -55,11 +55,104 @@
     justify-content: center;
     z-index: 1000;
 }
-.table-responsive {
-    border-radius: 0.5rem;
-    overflow: hidden;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* Make sure dropdowns are not clipped and appear above other elements */
+.users-card { overflow: visible !important; }
+.users-card:hover { transform: none !important; }
+#usersTableContainer { overflow: visible !important; }
+.table-responsive { border-radius: 0.5rem; overflow: visible !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.users-table { overflow: visible !important; }
+.users-table tbody tr:hover { transform: none !important; }
+.users-table .dropdown-menu { z-index: 2000 !important; pointer-events: auto; }
+
+/* Users table visual refresh */
+.users-table thead th {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)) !important;
+    color: #ffffff !important;
+    border: none;
 }
+.users-table thead tr { border: none; }
+.users-table tbody td {
+    color: var(--text-secondary);
+    border-color: var(--border-light) !important;
+}
+.users-table tbody tr {
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.users-table tbody tr:nth-child(odd) { background: #fbfcff; }
+.users-table tbody tr:nth-child(even) { background: #ffffff; }
+.users-table tbody tr:hover {
+    background: #f1f5ff !important;
+    box-shadow: inset 4px 0 0 0 var(--brand-primary);
+}
+
+/* Avatar styling within table */
+.users-table .rounded-circle.bg-primary {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary)) !important;
+    box-shadow: var(--shadow-sm);
+}
+
+/* Role badges modern look */
+.users-table .badge.role-badge {
+    border-radius: var(--radius-full);
+    padding: 0.35rem 0.6rem;
+    letter-spacing: 0.02em;
+}
+.users-table .role-badge.bg-danger {
+    background: linear-gradient(135deg, var(--brand-danger), #f56565) !important;
+    color: #ffffff !important;
+}
+.users-table .role-badge.bg-success {
+    background: linear-gradient(135deg, var(--brand-success), #38b2ac) !important;
+    color: #ffffff !important;
+}
+.users-table .role-badge.bg-info {
+    background: linear-gradient(135deg, var(--brand-info), #4299e1) !important;
+    color: #ffffff !important;
+}
+.users-table .role-badge.bg-warning {
+    background: linear-gradient(135deg, var(--brand-warning), #f6ad55) !important;
+    color: var(--text-primary) !important;
+}
+.users-table .role-badge.bg-secondary {
+    background: linear-gradient(135deg, #718096, #4a5568) !important;
+    color: #ffffff !important;
+}
+
+/* Status badges: subtle tinted chips */
+.users-table .status-badge {
+    border-radius: var(--radius-full);
+    font-weight: 600;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid transparent;
+}
+.users-table .status-badge.bg-success {
+    background-color: rgba(72, 187, 120, 0.12) !important;
+    color: #2f855a !important;
+    border-color: rgba(72, 187, 120, 0.35) !important;
+}
+.users-table .status-badge.bg-danger {
+    background-color: rgba(245, 101, 101, 0.12) !important;
+    color: #c53030 !important;
+    border-color: rgba(245, 101, 101, 0.35) !important;
+}
+
+/* Actions button polish */
+.users-table .dropdown-toggle.btn-outline-secondary {
+    border-color: var(--border-default);
+    color: var(--text-secondary);
+    background: var(--surface-card);
+}
+.users-table .dropdown-toggle.btn-outline-secondary:hover {
+    background: var(--surface-hover);
+    border-color: var(--brand-primary);
+    color: var(--text-primary);
+}
+
+/* Dark theme adjustments */
+[data-theme="dark"] .users-table tbody tr:nth-child(odd) { background: #2b3446; }
+[data-theme="dark"] .users-table tbody tr:nth-child(even) { background: #232b3b; }
+[data-theme="dark"] .users-table tbody tr:hover { background: #364158 !important; }
+[data-theme="dark"] .users-table tbody td { color: var(--text-secondary); }
 </style>
 {% endblock %}
 
@@ -212,7 +305,7 @@
     <!-- Users Table -->
     <div class="row">
         <div class="col-12">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm users-card">
                 <div class="card-header bg-white border-bottom">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
@@ -234,7 +327,7 @@
                 <div class="card-body p-0 position-relative" id="usersTableContainer">
                     {% if users %}
                         <div class="table-responsive">
-                            <table class="table table-hover mb-0">
+                            <table class="table table-hover mb-0 users-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th scope="col" class="ps-4">
@@ -301,9 +394,11 @@
                                             </td>
                                             <td class="text-end pe-4">
                                                 <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+<button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
                                                             type="button" 
-                                                            data-bs-toggle="dropdown">
+                                                            data-bs-toggle="dropdown" 
+                                                            data-bs-display="static" 
+                                                            data-bs-auto-close="outside">
                                                         <i class="fas fa-cog"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end">

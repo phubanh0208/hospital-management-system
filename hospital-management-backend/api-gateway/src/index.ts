@@ -1028,29 +1028,7 @@ app.get('/api/patients/code/:code', authenticate, authorize('admin', 'staff', 'd
   }
 });
 
-// Update visit summary for patient
-app.post('/api/patients/:id/update-visit-summary', authenticate, authorize('admin', 'staff'), async (req: AuthenticatedRequest, res) => {
-  try {
-    console.log(`🔄 Update Visit Summary for Patient ${req.params.id} Request`);
-    const response = await fetch(`${getServiceUrl('patient')}/api/patients/${req.params.id}/update-visit-summary`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': req.headers.authorization || ''
-      },
-      signal: AbortSignal.timeout(Number(process.env.GATEWAY_UPSTREAM_TIMEOUT_MS || 5000))
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (error) {
-    console.error('❌ Update Visit Summary Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Patient service unavailable',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+
 
 // Update all visit summaries
 app.post('/api/patients/update-all-visit-summaries', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res) => {
@@ -1100,7 +1078,7 @@ app.get('/api/patients/:id/medical-history', authenticate, authorize('admin', 's
 app.post('/api/patients/:id/medical-history', authenticate, authorize('admin', 'staff', 'doctor'), async (req: AuthenticatedRequest, res) => {
   try {
     console.log(`➕ Add Medical History for Patient ${req.params.id} Request`);
-    const response = await fetch(`${getServiceUrl('patient')}/api/patients/${req.params.id}/medical-history`, {
+        const response = await fetch(`${getServiceUrl('patient')}/api/patients/${req.params.id}/medical-history`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1167,25 +1145,7 @@ app.delete('/api/patients/medical-history/:historyId', authenticate, authorize('
   }
 });
 
-// Get visit summary
-app.get('/api/patients/:id/visit-summary', authenticate, authorize('admin', 'staff', 'doctor', 'nurse'), async (req: AuthenticatedRequest, res) => {
-  try {
-    console.log(`📊 Get Visit Summary for Patient ${req.params.id} Request`);
-    const response = await fetch(`${getServiceUrl('patient')}/api/patients/${req.params.id}/visit-summary`, {
-      headers: { 'Authorization': req.headers.authorization || '' },
-      signal: AbortSignal.timeout(Number(process.env.GATEWAY_UPSTREAM_TIMEOUT_MS || 5000))
-    });
-    const data = await response.json();
-    res.status(response.status).json(data);
-  } catch (error) {
-    console.error('❌ Get Visit Summary Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Patient service unavailable',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
+
 
 // ======================
 // APPOINTMENT SERVICE ROUTES
@@ -1923,7 +1883,7 @@ app.post('/api/prescriptions', authenticate, authorize('admin', 'doctor'), check
 });
 
 // Update prescription status
-app.put('/api/prescriptions/:id', authenticate, authorize('admin', 'doctor'), checkWritePermissions('prescription'), checkDoctorOwnership(), async (req: AuthenticatedRequest, res) => {
+app.put('/api/prescriptions/:id', authenticate, authorize('admin', 'doctor', 'staff'), checkWritePermissions('prescription'), checkDoctorOwnership(), async (req: AuthenticatedRequest, res) => {
   try {
     console.log(`✏️ Update Prescription ${req.params.id} Request`);
     const response = await fetch(`${getServiceUrl('prescription')}/api/prescriptions/${req.params.id}`, {
@@ -2819,7 +2779,7 @@ app.get('/api/analytics/doctors/:doctorId/appointments/trends', authenticate, au
 // ======================
 
 // Get admin dashboard
-app.get('/api/analytics/dashboard/admin', authenticate, authorize('admin'), async (req: AuthenticatedRequest, res) => {
+app.get('/api/analytics/dashboard/admin', authenticate, authorize('admin', 'staff'), async (req: AuthenticatedRequest, res) => {
   try {
     console.log('👑 Get Admin Dashboard Request');
     const queryString = new URLSearchParams(req.query as Record<string, string>).toString();

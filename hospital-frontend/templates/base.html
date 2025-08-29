@@ -13,10 +13,10 @@
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
-    <!-- Modern Font -->
+    <!-- Modern Font - Enhanced -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Custom CSS -->
     <link href="{% load static %}{% static 'css/style.css' %}" rel="stylesheet">
@@ -25,10 +25,10 @@
 </head>
 <body>
     {% if is_authenticated %}
-        <!-- Navigation -->
+        <!-- Navigation - Enhanced -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
             <div class="container-fluid">
-                <a class="navbar-brand" href="{% url 'dashboard:index' %}">
+                <a class="navbar-brand fade-in" href="{% url 'dashboard:index' %}">
                     <i class="fas fa-hospital-alt me-2"></i>
                     {{ hospital_name }}
                 </a>
@@ -200,14 +200,14 @@
         </nav>
     {% endif %}
 
-    <!-- Main Content -->
-    <main class="{% if is_authenticated %}container-fluid mt-4{% else %}d-flex align-items-center min-vh-100{% endif %}">
-        <!-- Messages -->
+    <!-- Main Content - Enhanced -->
+    <main class="{% if is_authenticated %}container-fluid mt-4{% else %}d-flex align-items-center justify-content-center min-vh-100{% endif %}">
+        <!-- Messages - Enhanced -->
         {% if messages %}
             <div class="row">
                 <div class="col-12">
                     {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show fade-in" role="alert">
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show scale-in" role="alert">
                             {% if message.tags == 'success' %}
                                 <i class="fas fa-check-circle me-2"></i>
                             {% elif message.tags == 'danger' %}
@@ -218,14 +218,16 @@
                                 <i class="fas fa-info-circle me-2"></i>
                             {% endif %}
                             {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     {% endfor %}
                 </div>
             </div>
         {% endif %}
 
-        {% block content %}{% endblock %}
+        <div class="fade-in w-100">
+            {% block content %}{% endblock %}
+        </div>
     </main>
 
     <!-- Footer -->

@@ -6,7 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-
+.env
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
@@ -45,13 +45,6 @@ build/
 **/dist/
 **/build/
 
-# TypeScript compiled files
-*.js
-*.js.map
-!jest.config.js
-!*.config.js
-!scripts/*.js
-!test*.js
 
 # Optional npm cache directory
 .npm
@@ -77,13 +70,7 @@ build/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-*.env
+
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -109,6 +96,10 @@ dist
 # Vuepress v2.x temp and cache directory
 .temp
 .cache
+**/.env
+**/.env.local
+**/.env.development
+**/.env.production
 
 # Docusaurus cache and generated files
 .docusaurus
@@ -166,21 +157,6 @@ hospital-management-backend/*/logs/
 # PID files
 *.pid
 
-# Temporary files
-tmp/
-temp/
-
-# JWT secrets and keys
-*.pem
-*.key
-!docker/ssl/*.key
-!docker/ssl/*.pem
-
-# Database dumps
-*.sql
-*.dump
-!database/init/*.sql
-
 # Test files
 test-results/
 coverage/
@@ -228,3 +204,16 @@ bash.exe.stackdump
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node
+
+
+# Python / Django Frontend Specific
+/hospital-frontend/venv/
+/hospital-frontend/db.sqlite3
+/hospital-frontend/**/*.pyc
+/hospital-frontend/**/__pycache__/
+/hospital-frontend/logs/
+/hospital-frontend/.env
+/hospital-frontend/__pycache__/**/.env
+**/.env.local
+**/.env.development
+**/.env.production

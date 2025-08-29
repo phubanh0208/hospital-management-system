@@ -235,20 +235,17 @@ class UserCreateView(View):
                 'email': email,
                 'role': role,
                 'isActive': is_active,
-            }
-            
-            # Add password if provided
-            if password:
-                user_data['password'] = password
-            
-            # Add profile if any field is provided
-            if first_name or last_name or phone or address:
-                user_data['profile'] = {
+                'profile': {
                     'firstName': first_name,
                     'lastName': last_name,
                     'phone': phone,
                     'address': address,
                 }
+            }
+
+            # Add password if provided
+            if password:
+                user_data['password'] = password
             
             # API call to create user
             response = api_client.create_user(token=token, user_data=user_data)

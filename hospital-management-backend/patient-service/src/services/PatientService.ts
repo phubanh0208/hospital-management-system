@@ -460,8 +460,22 @@ export class PatientService {
     }
   }
 
-  async addMedicalHistory(patientId: string, historyData: Partial<PatientMedicalHistory>): Promise<PatientResult> {
+    async addMedicalHistory(patientId: string, historyData: Partial<PatientMedicalHistory>): Promise<PatientResult> {
     try {
+      // Check if patient exists
+      const patientCheck = await executeQuery(
+        this.pool,
+        'SELECT id FROM patients WHERE id = $1 AND is_active = true',
+        [patientId]
+      );
+
+      if (patientCheck.length === 0) {
+        return {
+          success: false,
+          message: 'Patient not found'
+        };
+      }
+
       const historyId = uuidv4();
 
       const insertQuery = `
@@ -655,39 +669,4 @@ export class PatientService {
     }
   };
 
-  // Helper method to format date fields to avoid timezone issues
-  private formatDateOnly = (dateValue: any): Date | undefined => {
-    if (!dateValue) return undefined;
-
-    try {
-      // If it's already a string in YYYY-MM-DD format, create a date in local time
-      if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-        const [year, month, day] = dateValue.split('-').map(Number);
-        return new Date(year, month - 1, day); // month is 0-based in JS Date
-      }
-
-      // If it's a Date object, recreate it in local time to avoid timezone conversion
-      if (dateValue instanceof Date) {
-        // Extract the date components in local time
-        const year = dateValue.getFullYear();
-        const month = dateValue.getMonth();
-        const day = dateValue.getDate();
-        return new Date(year, month, day); // Create new date in local time
-      }
-
-      // Try to parse other formats
-      const parsedDate = new Date(dateValue);
-      if (!isNaN(parsedDate.getTime())) {
-        const year = parsedDate.getFullYear();
-        const month = parsedDate.getMonth();
-        const day = parsedDate.getDate();
-        return new Date(year, month, day); // Create date in local time
-      }
-
-      return undefined;
-    } catch (error) {
-      logger.error('Error formatting date:', error);
-      return undefined;
-    }
-  };
 }

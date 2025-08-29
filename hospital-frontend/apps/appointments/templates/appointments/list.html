@@ -6,11 +6,40 @@
 {% block extra_css %}
 <style>
     .appointments-header {
+        position: relative;
         background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
-        color: white;
+        color: #ffffff;
         padding: 2rem;
-        border-radius: 10px;
+        border-radius: 12px;
         margin-bottom: 2rem;
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+    /* Subtle dark overlay to boost text contrast on any gradient */
+    .appointments-header::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.18) 100%);
+        pointer-events: none;
+    }
+    .appointments-header h2,
+    .appointments-header p,
+    .appointments-header small {
+        position: relative;
+        z-index: 1;
+        color: rgba(255, 255, 255, 0.97) !important;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+    }
+    .appointments-header .btn.btn-light {
+        background: #ffffff;
+        color: var(--brand-primary);
+        border: none;
+        box-shadow: var(--shadow-xs);
+    }
+    .appointments-header .btn.btn-outline-light {
+        color: #ffffff;
+        border-color: rgba(255,255,255,0.7);
     }
     
     .appointment-card {
@@ -152,7 +181,7 @@
                 <p class="mb-1">Manage patient appointments and scheduling</p>
                 <p class="mb-0">Total Appointments: {{ appointments|length }}</p>
             </div>
-            <div class="col-md-4 text-right">
+            <div class="col-md-4 text-md-end">
                 {% if user_role == 'admin' or user_role == 'staff' or user_role == 'doctor' %}
                 <a href="{% url 'appointments:book' %}" class="btn btn-light mr-2">
                     <i class="fas fa-plus"></i> Book Appointment

@@ -40,9 +40,18 @@
         margin-bottom: 0.5rem;
         border-radius: 0 5px 5px 0;
     }
-    .status-active { color: #1cc88a; }
-    .status-resolved { color: #36b9cc; }
-    .status-chronic { color: #f6c23e; }
+    /* Status badges with proper contrast */
+    .badge.status-active { background-color: #1cc88a; color: #ffffff; }
+    .badge.status-resolved { background-color: #36b9cc; color: #ffffff; }
+    .badge.status-chronic { background-color: #f6c23e; color: #2d3748; }
+
+    /* Improve contrast for small text on dark stat cards */
+    .stat-card.bg-primary .small,
+    .stat-card.bg-success .small,
+    .stat-card.bg-info .small { color: rgba(255, 255, 255, 0.92) !important; }
+
+    /* Ensure header titles are white on gradient headers */
+    .card-header h6 { color: #ffffff !important; }
 </style>
 {% endblock %}
 
@@ -78,13 +87,13 @@
                     <p class="text-muted mb-3">
                         <i class="fas fa-id-card"></i> {{ patient.patientCode }}
                     </p>
-                    
+
                     {% if patient.bloodType %}
                     <div class="mb-3">
                         <span class="badge bg-{{ patient.bloodType|blood_type_color }} fs-6">{{ patient.bloodType }}</span>
                     </div>
                     {% endif %}
-                    
+
                     <div class="row text-center">
                         <div class="col-4">
                             <div class="stat-card bg-primary text-white p-3">
@@ -104,7 +113,6 @@
                                 <div class="stat-card bg-success text-white p-3 hover-lift">
                                     <i class="fas fa-calendar-check fa-2x mb-2"></i>
                                     <div class="small">Visits</div>
-                                    <div class="h5">{{ visit_summary.totalAppointments|default:0 }}</div>
                                 </div>
                             </a>
                         </div>
@@ -113,7 +121,6 @@
                                 <div class="stat-card bg-info text-white p-3 hover-lift">
                                     <i class="fas fa-pills fa-2x mb-2"></i>
                                     <div class="small">Total</div>
-                                    <div class="h5">{{ visit_summary.activePrescriptions|default:0 }}</div>
                                 </div>
                             </a>
                         </div>
@@ -127,7 +134,7 @@
             <!-- Personal Information -->
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Personal Information</h6>
+                    <h6 class="m-0 font-weight-bold text-white">Personal Information</h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -135,7 +142,7 @@
                             <div class="info-card p-3 mb-3">
                                 <h6><i class="fas fa-user text-primary"></i> Basic Info</h6>
                                 <p class="mb-1"><strong>Full Name:</strong> {{ patient.fullName }}</p>
-                                <p class="mb-1"><strong>Date of Birth:</strong> 
+                                <p class="mb-1"><strong>Date of Birth:</strong>
                                     {% if patient.dateOfBirth %}
                                         {{ patient.dateOfBirth|iso_to_date:"F d, Y" }}
                                     {% else %}
@@ -158,14 +165,14 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     {% if patient.address %}
                     <div class="info-card p-3 mb-3">
                         <h6><i class="fas fa-map-marker-alt text-warning"></i> Address</h6>
                         <p class="mb-0">{{ patient.address|format_address }}</p>
                     </div>
                     {% endif %}
-                    
+
                     {% if patient.emergencyContact %}
                     <div class="info-card p-3">
                         <h6><i class="fas fa-exclamation-triangle text-danger"></i> Emergency Contact</h6>
@@ -184,7 +191,7 @@
             {% if patient.allergies or patient.medicalHistory or medical_history %}
             <div class="card shadow mb-4">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Medical Information</h6>
+                    <h6 class="m-0 font-weight-bold text-white">Medical Information</h6>
                 </div>
                 <div class="card-body">
                     {% if patient.allergies %}
@@ -193,14 +200,14 @@
                         <p class="mb-0">{{ patient.allergies }}</p>
                     </div>
                     {% endif %}
-                    
+
                     {% if patient.medicalHistory %}
                     <div class="alert alert-info">
                         <h6><i class="fas fa-notes-medical"></i> Medical History</h6>
                         <p class="mb-0">{{ patient.medicalHistory }}</p>
                     </div>
                     {% endif %}
-                    
+
                     {% if medical_history %}
                     <h6><i class="fas fa-history"></i> Detailed Medical History</h6>
                     {% for history in medical_history %}
@@ -212,7 +219,7 @@
                                 <small class="text-muted">Diagnosed: {{ history.diagnosedDate|date:"M d, Y" }}</small>
                                 {% endif %}
                             </div>
-                            <span class="badge bg-secondary status-{{ history.status }}">
+                            <span class="badge status-{{ history.status }}">
                                 {{ history.status|title }}
                             </span>
                         </div>
@@ -226,35 +233,11 @@
             </div>
             {% endif %}
 
-            <!-- Visit Summary -->
-            {% if visit_summary %}
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Visit Summary</h6>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p class="mb-2">
-                                <strong>Total Appointments:</strong> 
-                                <span class="badge bg-primary">{{ visit_summary.totalAppointments|default:0 }}</span>
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <p class="mb-2">
-                                <strong>Total Prescriptions:</strong>
-                                <span class="badge bg-success">{{ visit_summary.activePrescriptions|default:0 }}</span>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
 
             <!-- Quick Actions -->
             <div class="card shadow">
                 <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                    <h6 class="m-0 font-weight-bold text-white">Quick Actions</h6>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -294,7 +277,8 @@
                 <h5 class="modal-title">Add Medical History</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="medicalHistoryForm">
+                        <form id="medicalHistoryForm">
+                {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="conditionName" class="form-label">Condition Name</label>
@@ -329,21 +313,51 @@
 
 {% block extra_js %}
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const patientId = "{{ patient.id }}";
+
+        // Fetch appointments
+        fetch(`/api/appointments?patient_id=${patientId}`)
+            .then(response => response.json())
+            .then(data => {
+                const totalAppointments = data.data.appointments.length;
+                const visitsCountEl = document.getElementById('total-visits-count');
+                if (visitsCountEl) visitsCountEl.textContent = totalAppointments;
+                const visitsSummaryEl = document.getElementById('total-appointments-summary');
+                if (visitsSummaryEl) visitsSummaryEl.textContent = totalAppointments;
+            })
+            .catch(error => console.error('Error fetching appointments:', error));
+
+        // Fetch prescriptions
+        fetch(`/api/prescriptions?patient_id=${patientId}`)
+            .then(response => response.json())
+            .then(data => {
+                const totalPrescriptions = data.data.prescriptions.length;
+                const rxCountEl = document.getElementById('total-prescriptions-count');
+                if (rxCountEl) rxCountEl.textContent = totalPrescriptions;
+                const rxSummaryEl = document.getElementById('total-prescriptions-summary');
+                if (rxSummaryEl) rxSummaryEl.textContent = totalPrescriptions;
+            })
+            .catch(error => console.error('Error fetching prescriptions:', error));
+    });
+</script>
+
+<script>
 function addMedicalHistory() {
     new bootstrap.Modal(document.getElementById('medicalHistoryModal')).show();
 }
 
 document.getElementById('medicalHistoryForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const formData = {
         conditionName: document.getElementById('conditionName').value,
         diagnosedDate: document.getElementById('diagnosedDate').value || null,
         status: document.getElementById('status').value,
         notes: document.getElementById('notes').value || null
     };
-    
-    fetch(`/patients/{{ patient.id }}/medical-history/`, {
+
+        fetch(`/patients/{{ patient.id }}/medical-history/`, {
         method: 'POST',
         headers: {
             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,

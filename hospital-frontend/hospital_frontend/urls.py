@@ -2,14 +2,18 @@
 URL configuration for Hospital Management Frontend
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from .proxy import proxy_view
 
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
+    # API Proxy to forward requests to the backend gateway
+    re_path(r'^api/(?P<path>.*)$', proxy_view, name='proxy'),
+
 
     # Redirect root to dashboard
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),

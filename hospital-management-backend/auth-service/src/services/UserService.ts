@@ -228,7 +228,7 @@ export class UserService {
       const newUsers = await executeQuery(this.pool, insertQuery, [
         userId,
         userData.username,
-        userData.email,
+        encryptEmail(userData.email),
         passwordHash,
         userData.role || UserRole.STAFF,
         userData.hospitalId || null,
@@ -238,21 +238,20 @@ export class UserService {
 
       const newUser = newUsers[0];
       
-      // Create profile if provided
-      if (userData.profile && (userData.profile.firstName || userData.profile.lastName || userData.profile.phone || userData.profile.dateOfBirth || userData.profile.address || userData.profile.avatarUrl)) {
-        await executeQuery(this.pool,
-          `INSERT INTO user_profiles (user_id, first_name, last_name, phone, date_of_birth, address, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            newUser.id,
-            userData.profile.firstName || '',
-            userData.profile.lastName || '',
-            userData.profile.phone || '',
-            userData.profile.dateOfBirth || null,
-            userData.profile.address || '',
-            userData.profile.avatarUrl || ''
-          ]
-        );
-      }
+      // Create user profile, even if empty
+      const profile = userData.profile || {};
+      await executeQuery(this.pool,
+        `INSERT INTO user_profiles (user_id, first_name, last_name, phone, date_of_birth, address, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          newUser.id,
+          profile.firstName || '',
+          profile.lastName || '',
+          profile.phone ? encryptPhone(profile.phone) : '',
+          profile.dateOfBirth || null,
+          profile.address || '',
+          profile.avatarUrl || ''
+        ]
+      );
 
       return {
         id: newUser.id,
