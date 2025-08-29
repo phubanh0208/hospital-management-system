@@ -44,15 +44,12 @@ export class RabbitMQConnection {
         arguments: { 'x-delayed-type': 'direct' },
       });
 
-      // Bind the main queue to the delayed exchange
-      await this.channel.bindQueue(queue, delayedExchange, 'appointment.reminder');
-
       // Assert Dead Letter Exchange and Queue
       await this.channel.assertExchange(dlx, 'fanout', { durable: true });
       await this.channel.assertQueue(dlq, { durable: true });
       await this.channel.bindQueue(dlq, dlx, ''); // Bind DLQ to DLX
 
-      // Assert main queue with DLX configuration
+      // Assert main queue with DLX configuration FIRST
       await this.channel.assertQueue(queue, {
         durable: true,
         arguments: {
@@ -60,10 +57,13 @@ export class RabbitMQConnection {
         }
       });
 
-      // Bind queue to exchange with routing keys
+      // NOW bind queue to exchanges (queue must exist before binding)
       await this.channel.bindQueue(queue, exchange, 'notification.*');
       await this.channel.bindQueue(queue, exchange, 'appointment.*');
       await this.channel.bindQueue(queue, exchange, 'PRESCRIPTION_READY');
+      
+      // Bind the main queue to the delayed exchange
+      await this.channel.bindQueue(queue, delayedExchange, 'appointment.reminder');
 
       this.isConnected = true;
       logger.info('RabbitMQ connected successfully', {
@@ -149,9 +149,17 @@ export class RabbitMQConnection {
       throw new Error('RabbitMQ channel not available');
     }
 
-        const queue = process.env.NOTIFICATION_QUEUE || 'notification_queue_v2';
+    const queue = process.env.NOTIFICATION_QUEUE || 'notification_queue_v2';
 
     try {
+      // Ensure the queue exists before consuming
+      await this.channel.assertQueue(queue, {
+        durable: true,
+        arguments: {
+          'x-dead-letter-exchange': process.env.NOTIFICATION_DLX || 'notification_exchange_dlx'
+        }
+      });
+
       await this.channel.consume(queue, async (msg: any) => {
         if (msg) {
           try {

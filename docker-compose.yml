@@ -141,7 +141,9 @@ services:
 
   # RabbitMQ
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    build:
+      context: ./config/rabbitmq
+      dockerfile: Dockerfile
     container_name: hospital-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: hospital
