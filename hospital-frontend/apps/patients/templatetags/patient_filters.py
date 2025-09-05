@@ -130,3 +130,61 @@ def iso_to_date(value, fmt="F d, Y"):
     except Exception as e:
         logger.error(f"iso_to_date parse error: {e}; value={value}")
         return ""
+
+@register.filter
+def generate_page_numbers(pagination, current_page):
+    """Generate page numbers for pagination with ellipsis for large page counts"""
+    if not pagination or 'totalPages' not in pagination:
+        return []
+    
+    total_pages = pagination['totalPages']
+    current_page = int(current_page)
+    
+    if total_pages <= 7:
+        # If 7 or fewer pages, show all page numbers
+        return list(range(1, total_pages + 1))
+    
+    # For more than 7 pages, show smart pagination with ellipsis
+    page_numbers = []
+    
+    # Always show first page
+    page_numbers.append(1)
+    
+    if current_page <= 4:
+        # Show pages 2, 3, 4, 5, 6, 7, ..., last
+        for i in range(2, min(7, total_pages)):
+            page_numbers.append(i)
+        if total_pages > 7:
+            page_numbers.append('...')
+            page_numbers.append(total_pages)
+    elif current_page >= total_pages - 3:
+        # Show first, ..., last-6, last-5, last-4, last-3, last-2, last-1, last
+        page_numbers.append('...')
+        for i in range(max(2, total_pages - 6), total_pages):
+            page_numbers.append(i)
+        page_numbers.append(total_pages)
+    else:
+        # Show first, ..., current-1, current, current+1, ..., last
+        page_numbers.append('...')
+        for i in range(current_page - 1, current_page + 2):
+            page_numbers.append(i)
+        page_numbers.append('...')
+        page_numbers.append(total_pages)
+    
+    return page_numbers
+
+@register.filter
+def add_number(value, arg):
+    """Add a number to the value"""
+    try:
+        return int(value) + int(arg)
+    except (ValueError, TypeError):
+        return value
+
+@register.filter
+def subtract_number(value, arg):
+    """Subtract a number from the value"""
+    try:
+        return int(value) - int(arg)
+    except (ValueError, TypeError):
+        return value

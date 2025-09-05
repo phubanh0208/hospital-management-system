@@ -6,7 +6,8 @@ const medicationController = new MedicationController();
 
 // Medication routes
 router.get('/', medicationController.getAllMedications);
-router.get('/search/:searchTerm', medicationController.searchMedications);
+router.get('/search', medicationController.searchMedications); // Handle /search without parameter
+router.get('/search/:searchTerm', medicationController.searchMedications); // Handle /search with parameter
 router.get('/code/:medicationCode', medicationController.getMedicationByCode);
 router.get('/:id', medicationController.getMedicationById);
 router.post('/', medicationController.createMedication);

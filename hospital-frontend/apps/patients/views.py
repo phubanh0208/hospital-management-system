@@ -55,6 +55,7 @@ class PatientListView(View):
                     'sort_by': sort_by,
                     'sort_order': sort_order,
                     'current_page': page,
+                    'limit': limit,
                 }
 
                 return render(request, 'patients/list.html', context)
@@ -514,3 +515,70 @@ class PatientMedicalHistoryView(View):
         except Exception as e:
             logger.error(f"Error adding medical history for patient {patient_id}: {str(e)}")
             return JsonResponse({'success': False, 'message': 'Failed to add medical history. Please try again.'})
+
+
+@method_decorator(login_required, name='dispatch')
+class PatientAppointmentsAPIView(View):
+    """API view to get patient appointments for frontend"""
+
+    def get(self, request, patient_id):
+        token = request.session.get('access_token')
+        
+        if not token:
+            return JsonResponse({'success': False, 'message': 'Authentication required'})
+
+        try:
+            # Get appointments for the patient
+            response = api_client.get_appointments(
+                token=token,
+                patientId=patient_id,
+                page=1,
+                limit=100
+            )
+
+            if response.get('success'):
+                appointments = response.get('data', {}).get('appointments', [])
+                return JsonResponse({
+                    'success': True,
+                    'data': {
+                        'appointments': appointments
+                    }
+                })
+            else:
+                return JsonResponse({'success': False, 'message': response.get('message', 'Failed to get appointments')})
+
+        except Exception as e:
+            logger.error(f"Error getting appointments for patient {patient_id}: {str(e)}")
+            return JsonResponse({'success': False, 'message': 'Failed to get appointments'})
+
+@method_decorator(login_required, name='dispatch')
+class PatientPrescriptionsAPIView(View):
+    """API view to get patient prescriptions for frontend"""
+
+    def get(self, request, patient_id):
+        token = request.session.get('access_token')
+        
+        if not token:
+            return JsonResponse({'success': False, 'message': 'Authentication required'})
+
+        try:
+            # Get prescriptions for the patient
+            response = api_client.get_prescriptions(
+                token=token,
+                patientId=patient_id
+            )
+
+            if response.get('success'):
+                prescriptions = response.get('data', {}).get('prescriptions', [])
+                return JsonResponse({
+                    'success': True,
+                    'data': {
+                        'prescriptions': prescriptions
+                    }
+                })
+            else:
+                return JsonResponse({'success': False, 'message': response.get('message', 'Failed to get prescriptions')})
+
+        except Exception as e:
+            logger.error(f"Error getting prescriptions for patient {patient_id}: {str(e)}")
+            return JsonResponse({'success': False, 'message': 'Failed to get prescriptions'})

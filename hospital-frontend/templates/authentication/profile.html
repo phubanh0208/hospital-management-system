@@ -20,46 +20,6 @@
                     </a>
                 </div>
                 <div class="card-body">
-                    <!-- Connection Status -->
-                    <div class="alert {% if api_error %}alert-warning{% else %}alert-success{% endif %} mb-3">
-                        <div class="d-flex align-items-center">
-                            <i class="fas {% if api_error %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %} me-2"></i>
-                            <div>
-                                <strong>API Connection:</strong>
-                                {% if api_error %}
-                                    <span class="text-warning">{{ api_error }}</span>
-                                    <br><small>Showing cached session data</small>
-                                {% else %}
-                                    <span class="text-success">Connected - Live data from API</span>
-                                    {% if not user_data.profile %}
-                                        <br><small class="text-info">Profile information not yet completed</small>
-                                    {% endif %}
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Debug Info (Collapsible) -->
-                    <div class="mb-3">
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#debugInfo">
-                            <i class="fas fa-bug me-1"></i>Debug Info
-                        </button>
-                        <div class="collapse mt-2" id="debugInfo">
-                            <div class="card card-body bg-light">
-                                <small>
-                                    <strong>Session Data:</strong><br>
-                                    Username: {{ session_data.username }}<br>
-                                    Role: {{ session_data.user_role }}<br>
-                                    Email: {{ session_data.user_email }}<br>
-                                    Token: {{ token_preview }}<br>
-                                    <strong>API Data:</strong> {{ user_data|yesno:"Available,Not Available" }}<br>
-                                    {% if user_data %}
-                                    API Keys: {{ user_data.keys|join:", " }}
-                                    {% endif %}
-                                </small>
-                            </div>
-                        </div>
-                    </div>
 
                     {% if user_data or session_data.username %}
 
@@ -111,93 +71,124 @@
                         </div>
                     </div>
 
-                    <div class="row"
-
+                    <!-- Row 1: Personal Information and Account Information -->
+                    <div class="row">
                         <div class="col-md-6">
-                            <h6>Personal Information</h6>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td><strong>Username:</strong></td>
-                                    <td>{{ user_data.username|default:session_data.username }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Email:</strong></td>
-                                    <td>{{ user_data.email|default:session_data.user_email }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>First Name:</strong></td>
-                                    <td>
-                                        {% if user_data.profile %}
-                                            {{ user_data.profile.firstName|default:"Not provided" }}
-                                        {% else %}
-                                            Not provided
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Personal Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-borderless mb-0">
+                                        <tr>
+                                            <td><strong>Username:</strong></td>
+                                            <td>{{ user_data.username|default:session_data.username }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Email:</strong></td>
+                                            <td>{{ user_data.email|default:session_data.user_email }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>First Name:</strong></td>
+                                            <td>
+                                                {% if user_data.profile %}
+                                                    {{ user_data.profile.firstName|default:"Not provided" }}
+                                                {% else %}
+                                                    Not provided
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Last Name:</strong></td>
+                                            <td>
+                                                {% if user_data.profile %}
+                                                    {{ user_data.profile.lastName|default:"Not provided" }}
+                                                {% else %}
+                                                    Not provided
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Phone:</strong></td>
+                                            <td>
+                                                {% if user_data.profile %}
+                                                    {{ user_data.profile.phone|default:"Not provided" }}
+                                                {% else %}
+                                                    Not provided
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% if not user_data.role == 'doctor' and not session_data.user_role == 'doctor' %}
+                                        <tr>
+                                            <td><strong>Date of Birth:</strong></td>
+                                            <td>
+                                                {% if user_data.profile %}
+                                                    {{ user_data.profile.dateOfBirth|format_date_of_birth }}
+                                                {% else %}
+                                                    Not provided
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Address:</strong></td>
+                                            <td>
+                                                {% if user_data.profile %}
+                                                    {{ user_data.profile.address|linebreaks|default:"Not provided" }}
+                                                {% else %}
+                                                    Not provided
+                                                {% endif %}
+                                            </td>
+                                        </tr>
                                         {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Last Name:</strong></td>
-                                    <td>
-                                        {% if user_data.profile %}
-                                            {{ user_data.profile.lastName|default:"Not provided" }}
-                                        {% else %}
-                                            Not provided
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Phone:</strong></td>
-                                    <td>
-                                        {% if user_data.profile %}
-                                            {{ user_data.profile.phone|default:"Not provided" }}
-                                        {% else %}
-                                            Not provided
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Date of Birth:</strong></td>
-                                    <td>
-                                        {% if user_data.profile %}
-                                            {{ user_data.profile.dateOfBirth|format_date_of_birth }}
-                                        {% else %}
-                                            Not provided
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Address:</strong></td>
-                                    <td>
-                                        {% if user_data.profile %}
-                                            {{ user_data.profile.address|linebreaks|default:"Not provided" }}
-                                        {% else %}
-                                            Not provided
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Avatar:</strong></td>
-                                    <td>
-                                        {% if user_data.profile and user_data.profile.avatarUrl %}
-                                            <img src="{{ user_data.profile.avatarUrl }}"
-                                                 alt="Avatar"
-                                                 class="rounded border"
-                                                 style="width: 50px; height: 50px; object-fit: cover;">
-                                            <small class="ms-2 text-muted">{{ user_data.profile.avatarUrl }}</small>
-                                        {% else %}
-                                            Not provided
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Role:</strong></td>
-                                    <td><span class="badge bg-primary">{{ user_data.role|default:session_data.user_role|title }}</span></td>
-                                </tr>
-                            </table>
+                                        <tr>
+                                            <td><strong>Role:</strong></td>
+                                            <td><span class="badge bg-primary">{{ user_data.role|default:session_data.user_role|title }}</span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Doctor Profile Section (only for doctors) -->
-                        {% if user_data.role == 'doctor' or session_data.user_role == 'doctor' %}
-                        <div class="col-12 mt-4">
+                        <!-- Account Information Section -->
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Account Information</h6>
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-borderless mb-0">
+                                        <tr>
+                                            <td><strong>User ID:</strong></td>
+                                            <td><code class="small">{{ user_data.id|default:session_data.user_id|default:"Not available" }}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Created:</strong></td>
+                                            <td>{{ user_data.createdAt|parse_iso_date }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Last Updated:</strong></td>
+                                            <td>{{ user_data.updatedAt|parse_iso_date }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Status:</strong></td>
+                                            <td>
+                                                {% if user_data.isActive %}
+                                                    <span class="badge bg-success">Active</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Status Unknown</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Doctor Profile (only for doctors) -->
+                    {% if user_data.role == 'doctor' or session_data.user_role == 'doctor' %}
+                    <div class="row mt-4">
+                        <div class="col-12">
                             <div class="card border-primary">
                                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                     <h6 class="mb-0">
@@ -217,44 +208,30 @@
                                 </div>
                             </div>
                         </div>
-                        {% endif %}
-
-                        <div class="col-md-6">
-                            <h6>Account Information</h6>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td><strong>User ID:</strong></td>
-                                    <td><code>{{ user_data.id|default:session_data.user_id|default:"Not available" }}</code></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Created:</strong></td>
-                                    <td>{{ user_data.createdAt|parse_iso_date }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Last Updated:</strong></td>
-                                    <td>{{ user_data.updatedAt|parse_iso_date }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Status:</strong></td>
-                                    <td>
-                                        {% if user_data.isActive %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">Status Unknown</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                            </table>
-                        </div>
                     </div>
+                    {% endif %}
 
-                    <div class="mt-4">
-                        <a href="{% url 'authentication:change_password' %}" class="btn btn-primary">
-                            <i class="fas fa-key me-2"></i>Change Password
-                        </a>
-                        <a href="{% url 'dashboard:index' %}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                        </a>
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-tools me-2"></i>Actions</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <a href="{% url 'authentication:profile_edit' %}" class="btn btn-primary">
+                                            <i class="fas fa-edit me-2"></i>Edit Profile
+                                        </a>
+                                        <a href="{% url 'authentication:change_password' %}" class="btn btn-warning">
+                                            <i class="fas fa-key me-2"></i>Change Password
+                                        </a>
+                                        <a href="{% url 'dashboard:index' %}" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     {% else %}
                     <div class="alert alert-warning">

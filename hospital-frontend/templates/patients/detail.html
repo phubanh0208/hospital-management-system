@@ -18,21 +18,26 @@
         font-weight: bold;
         font-size: 32px;
     }
+
     .info-card {
         border-left: 4px solid var(--brand-primary);
         background: var(--surface-page);
     }
+
     .stat-card {
         border-radius: 10px;
         transition: transform 0.2s, box-shadow 0.2s;
     }
+
     .stat-card:hover {
         transform: translateY(-2px);
     }
+
     .hover-lift:hover {
         transform: translateY(-3px);
         box-shadow: var(--shadow-lg);
     }
+
     .medical-history-item {
         border-left: 3px solid #1cc88a;
         background: #f8f9fa;
@@ -40,18 +45,34 @@
         margin-bottom: 0.5rem;
         border-radius: 0 5px 5px 0;
     }
+
     /* Status badges with proper contrast */
-    .badge.status-active { background-color: #1cc88a; color: #ffffff; }
-    .badge.status-resolved { background-color: #36b9cc; color: #ffffff; }
-    .badge.status-chronic { background-color: #f6c23e; color: #2d3748; }
+    .badge.status-active {
+        background-color: #1cc88a;
+        color: #ffffff;
+    }
+
+    .badge.status-resolved {
+        background-color: #36b9cc;
+        color: #ffffff;
+    }
+
+    .badge.status-chronic {
+        background-color: #f6c23e;
+        color: #2d3748;
+    }
 
     /* Improve contrast for small text on dark stat cards */
     .stat-card.bg-primary .small,
     .stat-card.bg-success .small,
-    .stat-card.bg-info .small { color: rgba(255, 255, 255, 0.92) !important; }
+    .stat-card.bg-info .small {
+        color: rgba(255, 255, 255, 0.92) !important;
+    }
 
     /* Ensure header titles are white on gradient headers */
-    .card-header h6 { color: #ffffff !important; }
+    .card-header h6 {
+        color: #ffffff !important;
+    }
 </style>
 {% endblock %}
 
@@ -101,26 +122,30 @@
                                 <div class="small">Age</div>
                                 <div class="h5">
                                     {% if patient.dateOfBirth %}
-                                        {{ patient.dateOfBirth|calculate_age }} years
+                                    {{ patient.dateOfBirth|calculate_age }} years
                                     {% else %}
-                                        N/A
+                                    N/A
                                     {% endif %}
                                 </div>
                             </div>
                         </div>
                         <div class="col-4">
-                            <a href="{% url 'appointments:list' %}?patient_id={{ patient.id }}" class="text-decoration-none">
+                            <a href="{% url 'appointments:list' %}?patient_id={{ patient.id }}"
+                                class="text-decoration-none">
                                 <div class="stat-card bg-success text-white p-3 hover-lift">
                                     <i class="fas fa-calendar-check fa-2x mb-2"></i>
                                     <div class="small">Visits</div>
+                                    <div class="h5" id="total-visits-count">0</div>
                                 </div>
                             </a>
                         </div>
                         <div class="col-4">
-                            <a href="{% url 'prescriptions:list' %}?patient_id={{ patient.id }}" class="text-decoration-none">
+                            <a href="{% url 'prescriptions:list' %}?patient_id={{ patient.id }}"
+                                class="text-decoration-none">
                                 <div class="stat-card bg-info text-white p-3 hover-lift">
                                     <i class="fas fa-pills fa-2x mb-2"></i>
                                     <div class="small">Total</div>
+                                    <div class="h5" id="total-prescriptions-count">0</div>
                                 </div>
                             </a>
                         </div>
@@ -144,9 +169,9 @@
                                 <p class="mb-1"><strong>Full Name:</strong> {{ patient.fullName }}</p>
                                 <p class="mb-1"><strong>Date of Birth:</strong>
                                     {% if patient.dateOfBirth %}
-                                        {{ patient.dateOfBirth|iso_to_date:"F d, Y" }}
+                                    {{ patient.dateOfBirth|iso_to_date:"F d, Y" }}
                                     {% else %}
-                                        <em class="text-muted">Not provided</em>
+                                    <em class="text-muted">Not provided</em>
                                     {% endif %}
                                 </p>
                                 <p class="mb-1"><strong>Gender:</strong> {{ patient.gender|title }}</p>
@@ -242,13 +267,15 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 mb-2">
-                            <a href="{% url 'appointments:book' %}?patient={{ patient.id }}" class="btn btn-outline-primary btn-sm w-100">
+                            <a href="{% url 'appointments:book' %}?patient={{ patient.id }}"
+                                class="btn btn-outline-primary btn-sm w-100">
                                 <i class="fas fa-calendar-plus"></i> Book Appointment
                             </a>
                         </div>
                         {% if user_role == 'doctor' %}
                         <div class="col-md-3 mb-2">
-                            <a href="{% url 'prescriptions:create' %}?patient_id={{ patient.id }}" class="btn btn-outline-success btn-sm w-100">
+                            <a href="{% url 'prescriptions:create' %}?patient_id={{ patient.id }}"
+                                class="btn btn-outline-success btn-sm w-100">
                                 <i class="fas fa-prescription"></i> New Prescription
                             </a>
                         </div>
@@ -277,7 +304,7 @@
                 <h5 class="modal-title">Add Medical History</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-                        <form id="medicalHistoryForm">
+            <form id="medicalHistoryForm">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="mb-3">
@@ -313,70 +340,74 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const patientId = "{{ patient.id }}";
 
         // Fetch appointments
-        fetch(`/api/appointments?patient_id=${patientId}`)
+        fetch(`/patients/api/appointments/${patientId}/`)
             .then(response => response.json())
             .then(data => {
-                const totalAppointments = data.data.appointments.length;
-                const visitsCountEl = document.getElementById('total-visits-count');
-                if (visitsCountEl) visitsCountEl.textContent = totalAppointments;
-                const visitsSummaryEl = document.getElementById('total-appointments-summary');
-                if (visitsSummaryEl) visitsSummaryEl.textContent = totalAppointments;
+                if (data.success) {
+                    const totalAppointments = data.data.appointments.length;
+                    const visitsCountEl = document.getElementById('total-visits-count');
+                    if (visitsCountEl) visitsCountEl.textContent = totalAppointments;
+                    const visitsSummaryEl = document.getElementById('total-appointments-summary');
+                    if (visitsSummaryEl) visitsSummaryEl.textContent = totalAppointments;
+                }
             })
             .catch(error => console.error('Error fetching appointments:', error));
 
         // Fetch prescriptions
-        fetch(`/api/prescriptions?patient_id=${patientId}`)
+        fetch(`/patients/api/prescriptions/${patientId}/`)
             .then(response => response.json())
             .then(data => {
-                const totalPrescriptions = data.data.prescriptions.length;
-                const rxCountEl = document.getElementById('total-prescriptions-count');
-                if (rxCountEl) rxCountEl.textContent = totalPrescriptions;
-                const rxSummaryEl = document.getElementById('total-prescriptions-summary');
-                if (rxSummaryEl) rxSummaryEl.textContent = totalPrescriptions;
+                if (data.success) {
+                    const totalPrescriptions = data.data.prescriptions.length;
+                    const rxCountEl = document.getElementById('total-prescriptions-count');
+                    if (rxCountEl) rxCountEl.textContent = totalPrescriptions;
+                    const rxSummaryEl = document.getElementById('total-prescriptions-summary');
+                    if (rxSummaryEl) rxSummaryEl.textContent = totalPrescriptions;
+                }
             })
             .catch(error => console.error('Error fetching prescriptions:', error));
     });
 </script>
 
 <script>
-function addMedicalHistory() {
-    new bootstrap.Modal(document.getElementById('medicalHistoryModal')).show();
-}
+    function addMedicalHistory() {
+        new bootstrap.Modal(document.getElementById('medicalHistoryModal')).show();
+    }
 
-document.getElementById('medicalHistoryForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+    document.getElementById('medicalHistoryForm').addEventListener('submit', function (e) {
+        e.preventDefault();
 
-    const formData = {
-        conditionName: document.getElementById('conditionName').value,
-        diagnosedDate: document.getElementById('diagnosedDate').value || null,
-        status: document.getElementById('status').value,
-        notes: document.getElementById('notes').value || null
-    };
+        const formData = {
+            conditionName: document.getElementById('conditionName').value,
+            diagnosedDate: document.getElementById('diagnosedDate').value || null,
+            status: document.getElementById('status').value,
+            notes: document.getElementById('notes').value || null
+        };
 
         fetch(`/patients/{{ patient.id }}/medical-history/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert('Error: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Failed to add medical history. Please try again.');
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to add medical history. Please try again.');
+            });
     });
-});
 </script>
 {% endblock %}

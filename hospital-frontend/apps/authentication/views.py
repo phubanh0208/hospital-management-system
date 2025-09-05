@@ -59,7 +59,12 @@ class LoginView(View):
                 request.session['username'] = user.get('username')
                 request.session['user_role'] = user.get('role')
                 request.session['user_email'] = user.get('email')
-                request.session['user_full_name'] = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
+
+                # Get profile data for full name
+                profile = user.get('profile', {})
+                first_name = profile.get('firstName', '') if profile else ''
+                last_name = profile.get('lastName', '') if profile else ''
+                request.session['user_full_name'] = f"{first_name} {last_name}".strip()
                 
                 # Set session expiry
                 if remember_me:

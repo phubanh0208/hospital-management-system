@@ -438,21 +438,39 @@ export class MedicationService {
   // GET - Search medications by name or code (for autocomplete)
   async searchMedications(searchTerm: string): Promise<MedicationResult> {
     try {
-      const query = `
-        SELECT
-          id, medication_code, medication_name, generic_name, strength, unit, unit_price, currency
-        FROM medications
-        WHERE is_active = true
-        AND (
-          medication_name ILIKE $1 OR
-          medication_code ILIKE $1 OR
-          generic_name ILIKE $1
-        )
-        ORDER BY medication_name
-        LIMIT 20
-      `;
+      let query: string;
+      let values: any[];
 
-      const result = await executeQuery(this.pool, query, [`%${searchTerm}%`]);
+      if (!searchTerm || searchTerm.trim() === '') {
+        // If no search term, return all active medications
+        query = `
+          SELECT
+            id, medication_code, medication_name, generic_name, strength, unit, unit_price, currency
+          FROM medications
+          WHERE is_active = true
+          ORDER BY medication_name
+          LIMIT 50
+        `;
+        values = [];
+      } else {
+        // If search term provided, search with filters
+        query = `
+          SELECT
+            id, medication_code, medication_name, generic_name, strength, unit, unit_price, currency
+          FROM medications
+          WHERE is_active = true
+          AND (
+            medication_name ILIKE $1 OR
+            medication_code ILIKE $1 OR
+            generic_name ILIKE $1
+          )
+          ORDER BY medication_name
+          LIMIT 20
+        `;
+        values = [`%${searchTerm}%`];
+      }
+
+      const result = await executeQuery(this.pool, query, values);
 
       return {
         success: true,

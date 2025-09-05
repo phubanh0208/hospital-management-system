@@ -247,6 +247,168 @@ export class NotificationService {
 
       const userEmail = encryptedUserEmail;
 
+      // Use colorful email templates for specific notification types
+      if (templateName === 'appointment_reminder' && templateVariables) {
+        // Better date parsing - handle Vietnamese formatted dates
+        let appointmentDate: Date;
+        try {
+          if (templateVariables.appointment_date) {
+            const dateStr = templateVariables.appointment_date.toString();
+
+            // If it's already a Vietnamese formatted string like "Thứ Sáu, 5 tháng 9, 2025"
+            // Extract the actual date parts
+            if (dateStr.includes('tháng')) {
+              const dayMatch = dateStr.match(/(\d+)\s+tháng\s+(\d+),\s+(\d+)/);
+              if (dayMatch) {
+                const day = parseInt(dayMatch[1]);
+                const month = parseInt(dayMatch[2]);
+                const year = parseInt(dayMatch[3]);
+                appointmentDate = new Date(year, month - 1, day);
+              } else {
+                appointmentDate = new Date();
+              }
+            } else {
+              // Try parsing as regular date string
+              appointmentDate = new Date(dateStr);
+              // If invalid date, try parsing as DD/MM/YYYY format
+              if (isNaN(appointmentDate.getTime())) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  appointmentDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                } else {
+                  appointmentDate = new Date();
+                }
+              }
+            }
+          } else {
+            appointmentDate = new Date();
+          }
+        } catch (error) {
+          logger.warn('Error parsing appointment date, using current date', {
+            originalDate: templateVariables.appointment_date,
+            error: error
+          });
+          appointmentDate = new Date();
+        }
+
+        // Debug: Log all template variables to see what's available
+        logger.info('Sending colorful appointment reminder - DEBUG', {
+          patientName: templateVariables.patient_name,
+          doctorName: templateVariables.doctor_name,
+          appointmentDate: appointmentDate.toISOString(),
+          appointmentTime: templateVariables.appointment_time,
+          allTemplateVariables: JSON.stringify(templateVariables, null, 2)
+        });
+
+        // Try different possible doctor name fields - don't provide fallback
+        const doctorName = templateVariables.doctor_name ||
+                          templateVariables.doctorName ||
+                          templateVariables.doctor ||
+                          templateVariables.physician_name;
+
+        const patientName = templateVariables.patient_name ||
+                           templateVariables.patientName ||
+                           templateVariables.patient ||
+                           'Bệnh nhân';
+
+        const appointmentTime = templateVariables.appointment_time ||
+                               templateVariables.appointmentTime ||
+                               templateVariables.time ||
+                               'Chưa xác định giờ';
+
+        logger.info('Final values being sent to email service', {
+          doctorName,
+          patientName,
+          appointmentTime,
+          appointmentDate: appointmentDate.toISOString()
+        });
+
+        return await this.emailService.sendAppointmentReminder(
+          userEmail,
+          patientName,
+          doctorName,
+          appointmentDate,
+          appointmentTime
+        );
+      }
+
+      if (templateName === 'prescription_ready' && templateVariables) {
+        logger.info('Sending colorful prescription ready notification', {
+          patientName: templateVariables.patient_name,
+          prescriptionNumber: templateVariables.prescription_number,
+          templateVariables: templateVariables
+        });
+
+        return await this.emailService.sendPrescriptionReady(
+          userEmail,
+          templateVariables.patient_name || 'Bệnh nhân',
+          templateVariables.prescription_number || 'Chưa có mã'
+        );
+      }
+
+      if (templateName === 'appointment_confirmation' && templateVariables) {
+        // Better date parsing for appointment confirmation - handle Vietnamese formatted dates
+        let appointmentDate: Date;
+        try {
+          if (templateVariables.appointment_date) {
+            const dateStr = templateVariables.appointment_date.toString();
+
+            // If it's already a Vietnamese formatted string like "Thứ Bảy, 6 tháng 9, 2025"
+            // Extract the actual date parts
+            if (dateStr.includes('tháng')) {
+              const dayMatch = dateStr.match(/(\d+)\s+tháng\s+(\d+),\s+(\d+)/);
+              if (dayMatch) {
+                const day = parseInt(dayMatch[1]);
+                const month = parseInt(dayMatch[2]);
+                const year = parseInt(dayMatch[3]);
+                appointmentDate = new Date(year, month - 1, day);
+              } else {
+                appointmentDate = new Date();
+              }
+            } else {
+              // Try parsing as regular date string
+              appointmentDate = new Date(dateStr);
+              // If invalid date, try parsing as DD/MM/YYYY format
+              if (isNaN(appointmentDate.getTime())) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                  appointmentDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                } else {
+                  appointmentDate = new Date();
+                }
+              }
+            }
+          } else {
+            appointmentDate = new Date();
+          }
+        } catch (error) {
+          logger.warn('Error parsing appointment confirmation date, using current date', {
+            originalDate: templateVariables.appointment_date,
+            error: error
+          });
+          appointmentDate = new Date();
+        }
+
+        logger.info('Sending colorful appointment confirmation', {
+          patientName: templateVariables.patient_name,
+          doctorName: templateVariables.doctor_name,
+          appointmentNumber: templateVariables.appointment_number,
+          templateVariables: templateVariables
+        });
+
+        return await this.emailService.sendAppointmentConfirmation(
+          userEmail,
+          templateVariables.patient_name || 'Bệnh nhân',
+          templateVariables.doctor_name || 'Bác sĩ',
+          appointmentDate,
+          templateVariables.appointment_time || 'Chưa xác định',
+          templateVariables.appointment_number || 'N/A',
+          templateVariables.room_number,
+          templateVariables.reason
+        );
+      }
+
+      // Fallback to regular template system for other notification types
       let subject = notification.title;
       let body = notification.message;
 

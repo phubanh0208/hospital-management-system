@@ -64,7 +64,6 @@ class UserListView(View):
         role_choices = [
             ('admin', 'Administrator'),
             ('doctor', 'Doctor'),
-            ('nurse', 'Nurse'),
             ('staff', 'Staff'),
             ('patient', 'Patient'),
         ]
@@ -193,9 +192,7 @@ class UserCreateView(View):
         role_choices = [
             ('admin', 'Administrator'),
             ('doctor', 'Doctor'),
-            ('nurse', 'Nurse'),
-            ('staff', 'Staff'),
-            ('patient', 'Patient'),
+            ('staff', 'Staff')
         ]
         
         context = {
@@ -217,7 +214,7 @@ class UserCreateView(View):
             password = request.POST.get('password', '').strip()
             role = request.POST.get('role', '').strip()
             is_active = request.POST.get('is_active') == 'on'
-            
+
             # Profile data
             first_name = request.POST.get('first_name', '').strip()
             last_name = request.POST.get('last_name', '').strip()

@@ -84,14 +84,15 @@ export class MedicationController {
     }
   };
 
-  // GET /api/medications/search/:searchTerm - Search medications
+  // GET /api/medications/search - Search medications (with or without search term)
   searchMedications = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { searchTerm } = req.params;
+      // Check if search term is in params (from /search/:searchTerm) or query (from /search?q=...)
+      let searchTerm = req.params.searchTerm || req.query.q as string;
 
-      if (!searchTerm || searchTerm.length < 2) {
-        res.status(400).json(createErrorResponse('Search term must be at least 2 characters'));
-        return;
+      // If no search term provided, allow empty search to return all medications
+      if (!searchTerm) {
+        searchTerm = '';
       }
 
       const result = await this.medicationService.searchMedications(searchTerm);

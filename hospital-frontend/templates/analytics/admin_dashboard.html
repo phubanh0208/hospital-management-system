@@ -30,7 +30,7 @@
             <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-users me-2"></i>Total Patients</h5>
-                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_patients|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">{{ dashboard.total_patients|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -38,7 +38,7 @@
             <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, var(--brand-secondary), var(--brand-primary));">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-user-md me-2"></i>Total Doctors</h5>
-                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_doctors|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">{{ dashboard.total_doctors|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -46,7 +46,7 @@
             <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, #20c997, #00D1B2);">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-dollar-sign me-2"></i>Total Revenue</h5>
-                    <p class="card-text fs-4 fw-bold">${{ dashboard.total_revenue|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">${{ dashboard.total_revenue|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -54,7 +54,7 @@
             <div class="card stat-card text-white h-100" style="background: linear-gradient(135deg, #64748b, #334155);">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-check-circle me-2"></i>Completion Rate</h5>
-                    <p class="card-text fs-4 fw-bold">{{ dashboard.completion_rate|default:0 }}%</p>
+                    <p class="card-text fs-4 fw-bold text-white">{{ dashboard.completion_rate|default:0 }}%</p>
                 </div>
             </div>
         </div>

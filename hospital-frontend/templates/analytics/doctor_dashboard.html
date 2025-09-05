@@ -30,7 +30,7 @@
             <div class="card stat-card bg-primary text-white h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-calendar-check me-2"></i>Total Appointments</h5>
-                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_appointments|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">{{ dashboard.total_appointments|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -38,7 +38,7 @@
             <div class="card stat-card bg-info text-white h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-users me-2"></i>Unique Patients</h5>
-                    <p class="card-text fs-4 fw-bold">{{ dashboard.unique_patients|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">{{ dashboard.unique_patients|default:0 }}</p>
                 </div>
             </div>
         </div>
@@ -46,15 +46,15 @@
             <div class="card stat-card bg-success text-white h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-prescription-bottle-alt me-2"></i>Total Prescriptions</h5>
-                    <p class="card-text fs-4 fw-bold">{{ dashboard.total_prescriptions|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">{{ dashboard.total_prescriptions|default:0 }}</p>
                 </div>
             </div>
         </div>
         <div class="col-lg-3 col-md-6 mb-4">
-            <div class="card stat-card bg-warning text-dark h-100">
+            <div class="card stat-card bg-warning text-white h-100">
                 <div class="card-body">
                     <h5 class="card-title"><i class="fas fa-dollar-sign me-2"></i>Total Revenue</h5>
-                    <p class="card-text fs-4 fw-bold">${{ dashboard.total_revenue|default:0 }}</p>
+                    <p class="card-text fs-4 fw-bold text-white">${{ dashboard.total_revenue|default:0 }}</p>
                 </div>
             </div>
         </div>

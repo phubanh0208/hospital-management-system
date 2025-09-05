@@ -14,6 +14,8 @@ from utils.api_client import APIClient
 import logging
 from datetime import datetime, timedelta
 import json
+from zoneinfo import ZoneInfo
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -75,14 +77,16 @@ class AppointmentListView(View):
                         try:
                             # Parse ISO datetime string to Python datetime
                             scheduled_date_str = appointment['scheduled_date']
+                            # Keep original string for template filters
+                            appointment['scheduled_date_original'] = scheduled_date_str
 
-                            # If it ends with Z, it's UTC time - treat as local time instead
-                            if scheduled_date_str.endswith('Z'):
-                                # Remove Z and parse as naive datetime (local time)
-                                scheduled_date_str = scheduled_date_str[:-5]  # Remove .000Z
-                                appointment['scheduled_date'] = datetime.fromisoformat(scheduled_date_str)
-                            else:
-                                appointment['scheduled_date'] = datetime.fromisoformat(scheduled_date_str)
+                            if ' ' in scheduled_date_str:
+                                scheduled_date_str = scheduled_date_str.replace(' ', 'T')
+                            dt = datetime.fromisoformat(scheduled_date_str)
+
+                            # Convert to local timezone for display
+                            local_tz = ZoneInfo(settings.TIME_ZONE)
+                            appointment['scheduled_date'] = dt.astimezone(local_tz)
 
                         except Exception as e:
                             logger.error(f"Error parsing scheduled_date for appointment {appointment.get('id')}: {str(e)}")
@@ -205,6 +209,8 @@ class AppointmentDetailView(View):
             appointment_response = api_client.get_direct(f'http://localhost:3003/api/appointments/{appointment_id}')
             appointment = appointment_response.get('data', {})
 
+
+
             if not appointment:
                 messages.error(request, "Appointment not found")
                 return redirect('appointments:list')
@@ -215,16 +221,23 @@ class AppointmentDetailView(View):
                 try:
                     if not dt_str:
                         return None
-                    # Remove trailing 'Z' if present; keep milliseconds if any
-                    if isinstance(dt_str, str) and dt_str.endswith('Z'):
-                        dt_str = dt_str[:-1]
-                    return datetime.fromisoformat(dt_str) if isinstance(dt_str, str) else dt_str
+                    
+                    if ' ' in dt_str:
+                        dt_str = dt_str.replace(' ', 'T')
+                    dt = datetime.fromisoformat(dt_str)
+                    
+                    # Convert to local timezone for display
+                    local_tz = ZoneInfo(settings.TIME_ZONE)
+                    return dt.astimezone(local_tz)
                 except Exception as e:
                     logger.error(f"Error parsing datetime '{dt_str}': {e}")
                     return None
 
             # Support both snake_case and camelCase from API
-            appointment['scheduled_date'] = parse_iso(appointment.get('scheduled_date') or appointment.get('scheduledDate'))
+            # Keep original string data for template filters, add parsed versions for other uses
+            original_scheduled_date = appointment.get('scheduled_date') or appointment.get('scheduledDate')
+            appointment['scheduled_date_original'] = original_scheduled_date
+            appointment['scheduled_date'] = parse_iso(original_scheduled_date)
             appointment['created_at'] = parse_iso(appointment.get('created_at') or appointment.get('createdAt'))
             appointment['confirmed_at'] = parse_iso(appointment.get('confirmed_at') or appointment.get('confirmedAt'))
             appointment['completed_at'] = parse_iso(appointment.get('completed_at') or appointment.get('completedAt'))
@@ -441,20 +454,26 @@ class BookAppointmentView(View):
 
             # Parse datetime and format for API
             if scheduled_datetime:
-                from datetime import datetime
+                from datetime import datetime, timezone
                 try:
                     # Parse datetime-local format (YYYY-MM-DDTHH:MM)
                     dt = datetime.fromisoformat(scheduled_datetime)
 
-                    # Send as local time without timezone conversion
-                    # Let the API handle timezone if needed
-                    scheduled_date_iso = dt.strftime('%Y-%m-%dT%H:%M:%S')
+                    # Make the datetime object timezone-aware using the project's timezone
+                    local_tz = ZoneInfo(settings.TIME_ZONE)
+                    dt_aware = dt.replace(tzinfo=local_tz)
+
+                    # Convert to UTC
+                    dt_utc = dt_aware.astimezone(timezone.utc)
+
+                    # Send as UTC ISO 8601 string
+                    scheduled_date_iso = dt_utc.isoformat()
 
                     # Keep local time for display
                     appointment_date = dt.strftime('%Y-%m-%d')
                     appointment_time = dt.strftime('%H:%M')
 
-                    logger.info(f"Datetime conversion: Input={scheduled_datetime}, Parsed={dt}, ISO={scheduled_date_iso}")
+                    logger.info(f"Datetime conversion: Input={scheduled_datetime}, Aware={dt_aware}, UTC={dt_utc}, ISO={scheduled_date_iso}")
                 except ValueError as e:
                     logger.error(f"Datetime parsing error: {e}")
                     scheduled_date_iso = scheduled_datetime
@@ -532,66 +551,11 @@ class BookAppointmentView(View):
             selected_patient = next((p for p in patients if p['id'] == patient_id), None)
             selected_doctor = next((d for d in doctors if d['id'] == doctor_id), None)
 
-            # If doctor not found in initial list, try to get from API
-            if not selected_doctor and doctor_id:
-                try:
-                    # Search all doctors and find by userId
-                    doctors_response = api_client._make_request('GET', '/api/doctors', token=None)
-                    if doctors_response.get('success'):
-                        all_doctors = doctors_response.get('data', {}).get('doctors', [])
-                        doctor_data = next((d for d in all_doctors if d.get('userId') == doctor_id), None)
-
-                        if doctor_data:
-                            full_name = f"{doctor_data.get('firstName', '')} {doctor_data.get('lastName', '')}".strip()
-                            if not full_name:
-                                full_name = doctor_data.get('username', 'Unknown Doctor')
-
-                            selected_doctor = {
-                                'id': doctor_data.get('userId'),
-                                'fullName': full_name,
-                                'name': full_name,
-                                'specialization': doctor_data.get('specialization', 'General Medicine'),
-                                'username': doctor_data.get('username', '')
-                            }
-                            logger.info(f"Found doctor from doctors API: {selected_doctor}")
-                        else:
-                            logger.warning(f"Doctor with userId {doctor_id} not found in doctors API")
-
-                    # Fallback to user service if still not found
-                    if not selected_doctor:
-                        user_response = api_client.get_direct(f'http://localhost:3001/api/users/{doctor_id}')
-                        if user_response.get('success'):
-                            user_data = user_response.get('data', {})
-                            selected_doctor = {
-                                'id': doctor_id,
-                                'fullName': user_data.get('fullName') or user_data.get('username', 'Unknown Doctor'),
-                                'name': user_data.get('fullName') or user_data.get('username', 'Unknown Doctor'),
-                                'specialization': user_data.get('specialization', 'General Medicine'),
-                                'username': user_data.get('username', '')
-                            }
-                            logger.info(f"Found doctor from user service: {selected_doctor}")
-
-                except Exception as e:
-                    logger.error(f"Error fetching doctor details: {str(e)}")
-
-                # Final fallback
-                if not selected_doctor:
-                    selected_doctor = {
-                        'id': doctor_id,
-                        'fullName': 'Unknown Doctor',
-                        'name': 'Unknown Doctor',
-                        'specialization': 'General Medicine',
-                        'username': 'unknown'
-                    }
+            # No need for complex doctor resolution - the frontend already provides the doctor name via form data
 
             # Get current user ID from profile
             user_profile = api_client.get_profile(token=request.session.get('access_token'))
             current_user_id = user_profile.get('data', {}).get('id') if user_profile.get('success') else None
-
-            # Debug logging
-            logger.info(f"Booking appointment - Patient ID: {patient_id}, Doctor ID: {doctor_id}")
-            logger.info(f"Selected patient: {selected_patient}")
-            logger.info(f"Selected doctor: {selected_doctor}")
 
             appointment_data = {
                 # API validation expects specific field names
@@ -599,7 +563,7 @@ class BookAppointmentView(View):
                 'patientName': selected_patient['fullName'] if selected_patient else 'Unknown Patient',
                 'patientPhone': selected_patient.get('phone', 'N/A') if selected_patient else 'N/A',
                 'doctorId': doctor_id,
-                'doctorName': (selected_doctor.get('fullName') or selected_doctor.get('name', 'Unknown Doctor')) if selected_doctor else 'Unknown Doctor',
+                'doctorName': request.POST.get('doctor_name', f"Doctor {doctor_id[:8]}"),
                 'type': request.POST.get('appointment_type', 'consultation'),  # For validation
                 'appointmentType': request.POST.get('appointment_type', 'consultation'),  # For service
                 'appointmentDate': appointment_date,  # Separate date field YYYY-MM-DD

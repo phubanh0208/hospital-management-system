@@ -601,10 +601,7 @@ class MedicationSearchView(View):
             token = request.session.get('access_token')
             search_term = request.GET.get('q', '')
 
-            if len(search_term) < 2:
-                return JsonResponse({'medications': []})
-
-            # Search medications
+            # Search medications (allow empty search to return all medications)
             response = api_client.search_medications(token, search_term)
 
             if response.get('success'):

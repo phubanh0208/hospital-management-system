@@ -196,12 +196,12 @@
     <div class="booking-header">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h2 class="mb-2">
+                <h2 class="mb-2 text-white">
                     <i class="fas fa-calendar-plus"></i> 
                     Book New Appointment
                 </h2>
-                <p class="mb-1">Schedule a new appointment for patient consultation</p>
-                <p class="mb-0">Fill in the details below to book an appointment</p>
+                <p class="mb-1 text-white">Schedule a new appointment for patient consultation</p>
+                <p class="mb-0 text-white">Fill in the details below to book an appointment</p>
             </div>
             <div class="col-md-4 text-right">
                 <a href="{% url 'appointments:list' %}" class="btn btn-light">
@@ -277,6 +277,7 @@
                         </div>
                         
                                                 <input type="hidden" name="doctor_id" id="selectedDoctorId" value="{{ selected_doctor_id }}">
+                        <input type="hidden" name="doctor_name" id="selectedDoctorName" value="{{ selected_doctor.fullName|default:'' }}">
                         <input type="hidden" name="fee" id="consultationFee">
                     </div>
                     
@@ -824,8 +825,9 @@ async function selectDoctorFromSearch(doctorId, fullName, specialization, userna
         doctorCard.classList.add('selected');
     }
 
-    // Update hidden input
+    // Update hidden inputs
     document.getElementById('selectedDoctorId').value = doctorId;
+    document.getElementById('selectedDoctorName').value = fullName;
 
     // Update summary
     updateBookingSummary();
@@ -864,8 +866,9 @@ function clearDoctorSelection() {
         doctorPlaceholder.style.display = 'block';
     }
 
-    // Clear hidden input
+    // Clear hidden inputs
     document.getElementById('selectedDoctorId').value = '';
+    document.getElementById('selectedDoctorName').value = '';
 
     // Update summary
     updateBookingSummary();

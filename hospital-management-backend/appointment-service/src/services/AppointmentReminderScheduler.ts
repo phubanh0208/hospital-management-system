@@ -89,7 +89,16 @@ export class AppointmentScheduler {
   }
 
   private formatDate(date: string | Date): string {
-    const d = new Date(date);
+    // If date is a string in YYYY-MM-DD format, parse it as local date to avoid timezone issues
+    let d: Date;
+    if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Parse YYYY-MM-DD as local date (not UTC)
+      const [year, month, day] = date.split('-').map(Number);
+      d = new Date(year, month - 1, day); // month is 0-based
+    } else {
+      d = new Date(date);
+    }
+
     return d.toLocaleDateString('vi-VN', {
       weekday: 'long',
       year: 'numeric',

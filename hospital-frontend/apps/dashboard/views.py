@@ -100,11 +100,17 @@ class DashboardView(View):
             # Get doctor's appointments
             appointments_response = api_client.get_appointments(token, limit=10)
             my_appointments = appointments_response.get('data', {}).get('appointments', []) if appointments_response.get('success') else []
-            
+
+            # Process appointment data for template filters
+            for appointment in my_appointments:
+                if appointment.get('scheduled_date'):
+                    # Keep original string for template filters
+                    appointment['scheduled_date_original'] = appointment['scheduled_date']
+
             # Get doctor's prescriptions
             prescriptions_response = api_client.get_prescriptions(token, limit=5)
             my_prescriptions = prescriptions_response.get('data', {}).get('prescriptions', []) if prescriptions_response.get('success') else []
-            
+
             return {
                 'my_appointments': my_appointments,
                 'my_prescriptions': my_prescriptions,
@@ -138,11 +144,17 @@ class DashboardView(View):
             # Get patient's appointments
             appointments_response = api_client.get_appointments(token, limit=5)
             my_appointments = appointments_response.get('data', {}).get('appointments', []) if appointments_response.get('success') else []
-            
+
+            # Process appointment data for template filters
+            for appointment in my_appointments:
+                if appointment.get('scheduled_date'):
+                    # Keep original string for template filters
+                    appointment['scheduled_date_original'] = appointment['scheduled_date']
+
             # Get patient's prescriptions
             prescriptions_response = api_client.get_prescriptions(token, limit=5)
             my_prescriptions = prescriptions_response.get('data', {}).get('prescriptions', []) if prescriptions_response.get('success') else []
-            
+
             return {
                 'my_appointments': my_appointments,
                 'my_prescriptions': my_prescriptions,
